@@ -41,21 +41,12 @@ static inline TimeUnit getFreq() {
 typedef unsigned long long TimeUnit;
 
 static inline TimeUnit getTime() {
-  unsigned long long tsc;
+  unsigned hi, lo;
 
-#if defined(__SUNPRO_CC)
-  asm
-#else
-  __asm__ __volatile__
-#endif
-    ("rdtsc;"
-     "shl $32, %%rdx;"
-     "or %%rdx, %%rax;"
-    : "=A"(tsc)
-    :
-    : "%edx"
-  );
-  return tsc;
+  __asm__ __volatile__ ("rdtsc\n"
+         : "=a" (lo), "=d" (hi)
+         :: "%rbx", "%rcx");
+  return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
 }
 
 static inline TimeUnit getTimeStart() {
