@@ -1,0 +1,60 @@
+
+WHAT IS THIS?
+-------------
+
+SuperGlue is a C++ library for task-parallelism, with data-dependent tasks.
+
+The programmer specifies tasks, and which data each task reads and writes,
+and SuperGlue uses this information to deduce dependencies.
+
+
+SHOW ME THE CODE!
+-----------------
+
+An example where a single, independent task is created and executed:
+
+    #include "superglue.hpp"
+    #include <iostream>
+    
+    // Settings for SuperGlue. Here we use the defaults.
+    struct Options : public DefaultOptions<Options> {};
+    
+    // Define a task, with no dependencies.
+    struct MyTask : public Task<Options> {
+        void run() {
+            std::cout << "Hello world!" << std::endl;
+        }
+    };
+    
+    int main() {
+        // The ThreadManager object starts the run-time system and starts
+        // as many worker threads as there are cores.
+        ThreadManager<Options> tm;
+    
+        // Create a task and submit it to SuperGlue
+        tm.submit(new MyTask());
+    
+        return 0;
+    }
+
+Check the "examples/" directory for more examples. The above example is found
+in "examples/helloworld/". For an example with task dependencies, look at
+"examples/dependencies/".
+
+
+COMPILING AND INSTALLING
+------------------------
+
+SuperGlue is a header-only C++ template library. As such, it is not compiled as
+its own unit, but included into and compiled together with other code. The only
+setup that is needed is to add the "superglue/" directory to the include paths
+of the compiler, and enable pthreads support (compile with the -pthread flag).
+
+
+GETTING STARTED
+---------------
+
+Running "make" will compile and run a few unit tests.
+Running "make examples" will compile all examples in the "examples/" directory.
+The "examples_dep/" directory contains examples with external dependencies.
+
