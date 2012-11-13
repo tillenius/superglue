@@ -2,11 +2,8 @@
 #include "core/contrib.hpp"
 #include "core/instr_tasktiming.hpp"
 
-#include <cstdio>
-#include <cstdlib>
-#include <string>
 #include <cmath>
-#include <cstddef>
+#include <iostream>
 
 using namespace std;
 
@@ -143,8 +140,8 @@ struct ScopedContribProxy {
             if (contrib != NULL)
                 return;
             contrib = Contribution<T>::allocate(size, dest);
-            std::fill((double *) Contribution<T>::getData(*contrib),
-                      (double *) (Contribution<T>::getData(*contrib)+size), 0.0);
+            fill((double *) Contribution<T>::getData(*contrib),
+                 (double *) (Contribution<T>::getData(*contrib)+size), 0.0);
         }
         else
             src = dest;
@@ -213,8 +210,8 @@ public:
     virtual void run() {
         taskStep(p0_, f0_, sliceSize_);
     }
-    virtual std::string getName() {
-        std::stringstream ss;
+    virtual string getName() {
+        stringstream ss;
         ss << "step " << (p0_ - globalptr)/sliceSize_;
         return ss.str();
     }
@@ -238,8 +235,8 @@ public:
     virtual void run() {
         taskEvalWithin(p0_, f0_, sliceSize_);
     }
-    virtual std::string getName() {
-        std::stringstream ss;
+    virtual string getName() {
+        stringstream ss;
         ss << "evalWithin " << (p0_ - globalptr)/sliceSize_;
         return ss.str();
     }
@@ -273,8 +270,8 @@ public:
         taskEvalBetweenC(p0_, p1_, f0_, f1_, Task<Options, 4>::getAccess(2),
                          Task<Options, 4>::getAccess(3), sliceSize_);
     }
-    virtual std::string getName() {
-        std::stringstream ss;
+    virtual string getName() {
+        stringstream ss;
         ss << "evalBetween "
                 << (p0_ - globalptr)/sliceSize_ << " "
                 << (p1_ - globalptr)/sliceSize_;
@@ -393,8 +390,10 @@ void compare(particle_t *p0, particle_t *p1, const size_t numParticles) {
         const double d2 = dx*dx+dy*dy+dz*dz;
 
         if (d2 > 1e-6) {
-            fprintf(stderr, "### %lu: (%8.2f,%8.2f,%8.2f) - (%8.2f, %8.2f, %8.2f) = (%8.2f, %8.2f, %8.2f)\n",
-                    i, p0[i].x[0], p0[i].x[1], p0[i].x[2], p1[i].x[0], p1[i].x[1], p1[i].x[2], dx, dy, dz);
+            cerr << "### " << i 
+                 << ": ("   << p0[i].x[0] << ", " << p0[i].x[1] << ", " << p0[i].x[2]
+                 << ") - (" << p1[i].x[0] << ", " << p1[i].x[1] << ", " << p1[i].x[2]
+                 << ") = (" << dx << ", " << dy << ", " << dz << ")" << endl;
         }
     }
 }
@@ -405,11 +404,9 @@ void compare(particle_t *p0, particle_t *p1, const size_t numParticles) {
 void dump(const particle_t *p, const size_t numParticles) {
     size_t i;
 
-    printf("%lu\n", numParticles);
-    for (i = 0; i < numParticles; ++i) {
-        printf("%8.2f %8.2f %8.2f\n",
-                p[i].x[0], p[i].x[1], p[i].x[2]);
-    }
+    cout << numParticles << endl;
+    for (i = 0; i < numParticles; ++i)
+        cout << p[i].x[0] << ", " << p[i].x[1] << ", " << p[i].x[2] << endl;
 }
 
 void ref(particle_t *particles, vector_t *forces, const size_t numParticles, const size_t numSteps) {
@@ -420,7 +417,7 @@ void ref(particle_t *particles, vector_t *forces, const size_t numParticles, con
     Time::TimeUnit time_start2 = Time::getTime();
     reference(&particles[0], &forces[0], numParticles, numSteps);
     Time::TimeUnit time_stop2 = Time::getTime();
-    std::cout << "ref: " << time_stop2-time_start2 << std::endl;
+    cout << "ref: " << time_stop2-time_start2 << endl;
 }
 
 void run(particle_t *particles, vector_t *forces,
@@ -447,11 +444,11 @@ void run(particle_t *particles, vector_t *forces,
     tm.barrier();
     time_stop = Time::getTime();
 
-    std::cout << "#cores=" << usedCores
-            << " #particles=" << numParticles
-            << " blocksize=" << blockSize
-            << " time=" << time_stop-time_start << " cycles"
-            << std::endl;
+    cout << "#cores=" << usedCores
+         << " #particles=" << numParticles
+         << " blocksize=" << blockSize
+         << " time=" << time_stop-time_start << " cycles"
+         << endl;
 }
 
 int main(int argc, char *argv[]) {
@@ -463,8 +460,8 @@ int main(int argc, char *argv[]) {
         numSteps = (size_t) atoi(argv[3]);
     }
     else {
-        printf("usage: %s <num_particles> <blocksize> <num_steps> [num_cores]\n\n", argv[0]);
-        printf("Example: %s 1024 128 4\n", argv[0]);
+        cout << "usage: " << argv[0] << " <num_particles> <blocksize> <num_steps> [num_cores]" << endl << endl;
+        cout << "Example: " << argv[0] << " 1024 128 4" << endl;
         exit(0);
     }
 
