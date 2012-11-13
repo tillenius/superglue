@@ -73,6 +73,13 @@ struct ThreadImplAux {
     }
     static int getNumCPUs() { return sysconf(_SC_NPROCESSORS_ONLN); }
 };
+#elif __APPLE__
+struct ThreadImplAux {
+    static void setAffinity(size_t hwcpuid) {
+        return; //TODO: darwin, OSX set cpu affinity
+    }
+    static int getNumCPUs() { return sysconf(_SC_NPROCESSORS_ONLN); }
+};
 #endif
 
 // ===========================================================================

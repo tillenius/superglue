@@ -4,31 +4,6 @@
 #include <pthread.h>
 #include "platform/atomic.hpp"
 
-class SpinLock {
-private:
-    pthread_spinlock_t spinlock;
-
-    SpinLock(const SpinLock &);
-    const SpinLock &operator=(const SpinLock &);
-public:
-    SpinLock() {
-        pthread_spin_init(&spinlock, PTHREAD_PROCESS_PRIVATE);
-    }
-    ~SpinLock() {
-        pthread_spin_destroy(&spinlock);
-    }
-
-    bool try_lock() {
-        return pthread_spin_trylock(&spinlock) == 0;
-    }
-    void unlock() {
-        pthread_spin_unlock(&spinlock);
-    }
-    void lock() {
-        pthread_spin_lock(&spinlock);
-    }
-};
-
 class SpinLockAtomic {
 public:
     volatile unsigned int v_;
@@ -53,6 +28,35 @@ public:
             while (v_ == 1);
     }
 };
+
+#ifdef __APPLE__
+typedef SpinLockAtomic SpinLock;
+#else
+class SpinLock {
+private:
+    pthread_spinlock_t spinlock;
+
+    SpinLock(const SpinLock &);
+    const SpinLock &operator=(const SpinLock &);
+public:
+    SpinLock() {
+        pthread_spin_init(&spinlock, PTHREAD_PROCESS_PRIVATE);
+    }
+    ~SpinLock() {
+        pthread_spin_destroy(&spinlock);
+    }
+
+    bool try_lock() {
+        return pthread_spin_trylock(&spinlock) == 0;
+    }
+    void unlock() {
+        pthread_spin_unlock(&spinlock);
+    }
+    void lock() {
+        pthread_spin_lock(&spinlock);
+    }
+};
+#endif
 
 class SpinLockScoped {
 private:
