@@ -42,7 +42,7 @@ public:
     // returns which thread should execute the task
     static size_t place(TaskBase<Options> *task, int cpuid, size_t numThreads) {
         if (cpuid == -1)
-            return 0;
+            return numThreads-1;
         return cpuid % numThreads;
     }
 };
