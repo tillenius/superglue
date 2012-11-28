@@ -234,7 +234,7 @@ public:
 
     void wait(Handle<Options> *handle) {
         while (handle->nextVersion()-1 != handle->getCurrentVersion()) {
-            TaskExecutor<Options>::executeTasks();
+            barrierProtocol.executeTasks();
             Atomic::compiler_fence(); // to reload the handle versions
         }
     }

@@ -263,6 +263,7 @@ public:
     }
 
     version_t getCurrentVersion() { return version; }
+    version_t nextVersion() { return requiredVersion.nextVersion(); }
 
     version_t schedule(int type) {
         return requiredVersion.schedule(type);
