@@ -198,8 +198,7 @@ public:
             else
                 access[i-1].getHandle()->increaseCurrentVersion(*this);
         }
-        if (!task->isReusable())
-            delete task;
+        Options::FreeTask::free(task);
     }
 
     static bool dependenciesReadyAtExecution(TaskBase<Options> *task, typename Options::LazyDependencyChecking) {

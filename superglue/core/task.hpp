@@ -14,21 +14,6 @@ template<typename Options> class TaskExecutor;
 namespace detail {
 
 // ============================================================================
-// Option: ReusableTasks
-// ============================================================================
-template<typename Options, typename T = typename Options::TaskReusableFlag> struct Task_ReusableTasks;
-
-template<typename Options>
-struct Task_ReusableTasks<Options, typename Options::Disable> {
-    bool isReusable() const { return false; }
-};
-
-template<typename Options>
-struct Task_ReusableTasks<Options, typename Options::Enable> {
-    virtual bool isReusable() const = 0;
-};
-
-// ============================================================================
 // Option: StealableFlag
 // ============================================================================
 template<typename Options, typename T = typename Options::TaskStealableFlag> struct Task_StealableFlag;
@@ -165,7 +150,6 @@ class TaskBaseDefault
     public detail::Task_TaskName<Options>,
     public detail::Task_Priorities<Options>,
     public detail::Task_StealableFlag<Options>,
-    public detail::Task_ReusableTasks<Options>,
     public detail::Task_Contributions<Options>
 {
     template<typename, typename> friend class Task_PassThreadId;

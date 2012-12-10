@@ -33,7 +33,6 @@ struct DefaultOptions {
     typedef Disable TaskId;              // tasks have a getGlobalId() method
     typedef Disable TaskPriorities;      // tasks must implement a getPriority() method
     typedef Disable TaskStealableFlag;   // tasks must implement a isStealable() method
-    typedef Disable TaskReusableFlag;    // tasks must implement a isReusable() method
     typedef Disable TaskStolenFlag;      // tasks have a isStolen() method
     typedef Disable HandleName;          // handles have setName() and getName() methods
     typedef Disable HandleId;            // handels have a getGlobalId() method
@@ -47,7 +46,7 @@ struct DefaultOptions {
     typedef Enable Stealing;             // Task stealing enabled
     typedef Enable ListQueue;
 
-    // Size of ThreadWorkspace
+    // Size of ThreadWorkspace (only used if ThreadWorkspace is enabled)
     enum { ThreadWorkspace_size = 102400 };
 
     // Dependency Checking Options
@@ -73,7 +72,14 @@ struct DefaultOptions {
         static void setMainThreadFlag() {}
     };
     typedef TaskExecutorNoInstrumentation TaskExecutorInstrumentation;
-
+    
+    // Releasing task memory
+    struct FreeTaskDefault {
+        static void free(TaskBase<Options> *task) {
+            delete task;
+        }
+    };
+    typedef FreeTaskDefault FreeTask;
 };
 
 #endif // __DEFAULTS_HPP__
