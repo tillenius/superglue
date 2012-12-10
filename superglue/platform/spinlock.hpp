@@ -29,20 +29,18 @@ public:
     }
 };
 
-#ifdef __APPLE__
-typedef SpinLockAtomic SpinLock;
-#else
-class SpinLock {
+#ifndef __APPLE__
+class SpinLockPthreads {
 private:
     pthread_spinlock_t spinlock;
 
-    SpinLock(const SpinLock &);
-    const SpinLock &operator=(const SpinLock &);
+    SpinLockPthreads(const SpinLockPthreads &);
+    const SpinLockPthreads &operator=(const SpinLockPthreads &);
 public:
-    SpinLock() {
+    SpinLockPthreads() {
         pthread_spin_init(&spinlock, PTHREAD_PROCESS_PRIVATE);
     }
-    ~SpinLock() {
+    ~SpinLockPthreads() {
         pthread_spin_destroy(&spinlock);
     }
 
@@ -56,7 +54,9 @@ public:
         pthread_spin_lock(&spinlock);
     }
 };
-#endif
+#endif // __APPLE__
+
+typedef SpinLockAtomic SpinLock;
 
 class SpinLockScoped {
 private:
