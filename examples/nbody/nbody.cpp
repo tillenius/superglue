@@ -35,6 +35,7 @@ struct Options : public DefaultOptions<Options> {
     typedef TaskExecutorTiming<Options> TaskExecutorInstrumentation;
     typedef Enable Contributions;
     typedef Contribution<vector_t> ContributionType;
+    typedef Enable TaskName;
 };
 
 typedef Handle<Options> handle_t;
