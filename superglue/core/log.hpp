@@ -21,7 +21,6 @@
 #include <string>
 #include <sstream>
 #include <signal.h>
-#include <tr1/unordered_map>
 
 template<typename Options> class Log;
 template<typename Options> class TaskBase;
@@ -152,7 +151,7 @@ private:
     struct AccessingTasks {
         size_t lasttype;
         std::vector<size_t> last[Options::AccessInfoType::numAccesses];
-        AccessingTasks() : lasttype(-1) {}
+        AccessingTasks() : lasttype(~0) {}
     };
 
     struct LogDagData {
@@ -535,9 +534,9 @@ public:
     };
     struct LogData {
         SpinLock initspinlock;
-        std::tr1::unordered_map<ThreadIDType, int> threadmap;
+        std::map<ThreadIDType, int> threadmap;
         ThreadData *threaddata;
-        LogData() : threadmap(64), threaddata(0) {}
+        LogData() : threaddata(0) {}
     };
 
 public:

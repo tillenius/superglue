@@ -105,7 +105,37 @@ struct AtomicImpl {
 };
 #endif // __SUNPRO_CC
 
-#if defined(__GNUC__)
+#if defined(__INTEL_COMPILER)
+
+struct AtomicImpl {
+    template<typename T> static void increase(T *ptr) { __sync_add_and_fetch(ptr, 1); }
+    template<typename T> static void decrease(T *ptr) { __sync_sub_and_fetch(ptr, 1); }
+    template<typename T> static T increase_nv(T *ptr) { return __sync_add_and_fetch(ptr, 1); }
+    template<typename T> static T decrease_nv(T *ptr) { return __sync_sub_and_fetch(ptr, 1); }
+    template<typename T> static T cas(volatile T *ptr, T oldval, T newval) { return __sync_val_compare_and_swap(ptr, oldval, newval); }
+    template<typename T> static void clear(volatile T *ptr) { __sync_and_and_fetch(ptr, 0); }
+
+#if defined(__SSE2__)
+    static void memory_fence_enter() { _mm_mfence(); }
+    static void memory_fence_exit() { _mm_mfence(); }
+    static void memory_fence_producer() { _mm_mfence(); }
+    static void memory_fence_consumer() { _mm_mfence(); }
+#else
+    static void memory_fence_enter() { __asm __volatile ("":::"memory"); }
+    static void memory_fence_exit() { __asm __volatile ("":::"memory"); }
+    static void memory_fence_producer() { __asm __volatile ("":::"memory"); }
+    static void memory_fence_consumer() { __asm __volatile ("":::"memory"); }
+#endif
+
+    static bool lock_test_and_set(volatile unsigned int *ptr) { return __sync_lock_test_and_set(ptr, 1) == 0; }
+    static void lock_release(volatile unsigned int *ptr) { __sync_lock_release(ptr); }
+
+    static void yield() { sched_yield(); }
+    static void rep_nop() { __asm __volatile ("rep;nop": : :"memory"); }
+    static void compiler_fence() { __asm __volatile ("":::"memory"); }
+};
+
+#elif defined(__GNUC__)
 struct AtomicImpl {
     template<typename T> static void increase(T *ptr) { __sync_add_and_fetch(ptr, 1); }
     template<typename T> static void decrease(T *ptr) { __sync_sub_and_fetch(ptr, 1); }
