@@ -107,12 +107,12 @@ void LOG_init_perf(unsigned int type, unsigned long long config) {
 unsigned long long LOG_getCacheStart() {
     unsigned long long count;
     count = LOG_readCounter();
-    ioctl(fd, PERF_EVENT_IOC_ENABLE);
+    ioctl(LOG_fd, PERF_EVENT_IOC_ENABLE);
     return count;
 }
 unsigned long long LOG_getCacheStop() {
     unsigned long long count;
-    ioctl(fd, PERF_EVENT_IOC_DISABLE);
+    ioctl(LOG_fd, PERF_EVENT_IOC_DISABLE);
     count = LOG_readCounter();
     return count;
 }
