@@ -3,6 +3,12 @@
 import sys
 import re
 
+#from matplotlib import rc
+#
+#rc('text', usetex=True)
+#rc('font', **{'family':'serif', 'serif':['Computer Modern Roman'], 
+#                                'monospace': ['Computer Modern Typewriter']})
+
 ##################################################
 # CONFIG
 ##################################################
@@ -19,6 +25,11 @@ nextcol = 0
 # which color to use for each task (fillcolor, edgecolor)
 def getColor(text):
     global nextcol
+
+    spl = text.split();
+    if len(spl) > 1:
+        text = spl[0]
+
     # hard-code task names to colors
     if text.startswith("read"): return ['#000000', '#000000']
 
@@ -63,7 +74,7 @@ def load_file(filename):
             if gg != None:
               name = gg.group(1)
               cache = int(gg.group(2))
-            out.append({'name': name.strip(), 
+            out.append({'name': name.strip(),
                         'procid': int(g.group(1)),
                         'threadid': int(g.group(2)),
                         'start': int(g.group(3)),
@@ -77,7 +88,7 @@ def load_file(filename):
             if gg != None:
                 name = gg.group(1)
                 cache = int(gg.group(2))
-            out.append({'name': name.strip(), 
+            out.append({'name': name.strip(),
                         'procid': 0,
                         'threadid': int(g.group(1)),
                         'start': int(g.group(2)),
@@ -96,7 +107,7 @@ def getMedian(numericValues):
     lower = theValues[len(theValues)/2-1]
     upper = theValues[len(theValues)/2]
 
-    return (float(lower + upper)) / 2  
+    return (float(lower + upper)) / 2
 
 
 ##################################################
@@ -222,4 +233,3 @@ print 'N= ', len(tasks), \
 
 drawPlot(tasks)
 pylab.show()
-
