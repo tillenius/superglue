@@ -1,2 +1,7 @@
+FLAGS=-O3 -pedantic -Wall -Wno-long-long -I superglue/
+
 viewer: viewer.cpp
-	g++ -Wall -o $@ viewer.cpp -lGL -lglut
+	$(CXX) $(FLAGS) viewer.cpp -lGL -lglut -o $@
+
+clean:
+	rm -f viewer

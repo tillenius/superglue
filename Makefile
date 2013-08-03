@@ -1,24 +1,17 @@
-EXAMPLEDIRS=$(wildcard examples/*)
-EXAMPLES=$(subst examples/,,$(EXAMPLEDIRS))
-EXAMPLEBINS=$(foreach example,$(EXAMPLES),examples/$(example)/$(example))
+FLAGS=-O3 -pedantic -Wall -Wno-long-long -I superglue/ -pthread
 
 unittest:
 	mkdir -p bin
-	$(CXX) -O3 -Wall -I superglue/ test/main.cpp -pthread -o bin/$@
-	./bin/unittest
+	$(CXX) $(FLAGS) test/main.cpp -o bin/$@
+	./bin/$@
 
-examples: $(EXAMPLEDIRS)
-
-examples/%:
-	( cd $@ ; make )
-
-$(EXAMPLEDIRS):
-	$(MAKE) -C $@
+examples:
+	( cd examples ; make )
 
 tools:
 	( cd tools ; make )
 
 clean:
-	rm -f ./bin/* $(EXAMPLEBINS)
+	rm -f ./bin/* ./examples/bin/*
 
-.PHONY: unittest examples tools $(EXAMPLEDIRS)
+.PHONY: unittest examples tools clean

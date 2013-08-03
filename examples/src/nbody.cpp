@@ -433,8 +433,8 @@ void run(particle_t *particles, vector_t *forces,
     const size_t numBlocks = numParticles/blockSize;
     int usedCores;
 
-    handle_t part[numBlocks];
-    handle_t forc[numBlocks];
+    handle_t *part = new handle_t[numBlocks];
+    handle_t *forc = new handle_t[numBlocks];
     Time::TimeUnit time_start;
     Time::TimeUnit time_stop;
 
@@ -450,6 +450,9 @@ void run(particle_t *particles, vector_t *forces,
          << " blocksize=" << blockSize
          << " time=" << time_stop-time_start << " cycles"
          << endl;
+
+    delete [] part;
+    delete [] forc;
 }
 
 int main(int argc, char *argv[]) {
