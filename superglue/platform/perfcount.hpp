@@ -51,6 +51,9 @@
 // { .type = PERF_TYPE_HW_CACHE, .config = (PERF_COUNT_HW_CACHE_BPU | (PERF_COUNT_HW_CACHE_OP_READ << 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS << 16))},
 // { .type = PERF_TYPE_HW_CACHE, .config = (PERF_COUNT_HW_CACHE_BPU | (PERF_COUNT_HW_CACHE_OP_READ << 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS << 16))},
 
+#include <cstdio>
+#include <cstdlib>
+#include <unistd.h>
 #include <sys/ioctl.h>
 #include <linux/perf_event.h>
 extern "C" {
@@ -110,8 +113,8 @@ public:
         attr.size = sizeof(struct perf_event_attr);
         fd = sys_perf_event_open(&attr, 0, -1, -1, 0);
         if (fd < 0) {
-            std::cerr << "sys_perf_event_open failed " << fd << std::endl;
-            exit(1);
+            fprintf(stderr, "sys_perf_event_open failed %d\n", fd);
+            ::exit(1);
         }
     }
 
@@ -126,8 +129,8 @@ public:
         unsigned long long count;
         size_t res = read(fd, &count, sizeof(unsigned long long));
         if (res != sizeof(unsigned long long)) {
-            std::cerr << "read() failed " << res << std::endl;
-            exit(1);
+            fprintf(stderr, "read() failed %lu\n", res);
+            ::exit(1);
         }
         return count;
     }
@@ -138,26 +141,25 @@ public:
 //
 //int main() {
 //
-//    Perf perf(PERF_TYPE_HARDWARE, PERF_COUNT_HW_CPU_CYCLES);
-//    Perf perf2(PERF_TYPE_HARDWARE, PERF_COUNT_HW_CACHE_MISSES);
+//    PerformanceCounter perf(PERF_TYPE_HARDWARE, PERF_COUNT_HW_CPU_CYCLES);
+//    PerformanceCounter perf2(PERF_TYPE_HARDWARE, PERF_COUNT_HW_CACHE_MISSES);
 //
 //    double d = 1.0;
 //
 //    perf.start();
-//    for (int i = 0; i < 1000000; ++i)
-//        d += 1e-5;
-//
 //    perf2.start();
+//    unsigned long long start_cycles = perf.readCounter();
+//    unsigned long long start_cache = perf2.readCounter();
 //    for (int i = 0; i < 1000000; ++i)
 //        d += 1e-5;
 //    perf.stop();
 //    perf2.stop();
 //
-//    unsigned long long cycles = perf.readCounter();
-//    unsigned long long cachemiss = perf2.readCounter();
+//    unsigned long long stop_cycles = perf.readCounter();
+//    unsigned long long stop_cache = perf2.readCounter();
 //
-//    printf("cycles = %lld\n", cycles);
-//    printf("cache misses = %lld\n", cachemiss);
+//    printf("cycles = %lld\n", stop_cycles - start_cycles);
+//    printf("cache misses = %lld\n", stop_cache - start_cache);
 //
 //  return 0;
 //}

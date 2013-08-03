@@ -30,14 +30,8 @@ static inline TimeUnit getFreq() {
     return i.QuadPart;
 }
 
-#else
-#include <sys/time.h>
-//typedef long int TimeUnit;
-//static inline TimeUnit getTime() {
-//    timeval tv;
-//    gettimeofday(&tv, 0);
-//    return (tv.tv_sec*1000000+tv.tv_usec);
-//}
+#elif defined(__x86_64__)
+
 typedef unsigned long long TimeUnit;
 
 static inline TimeUnit getTime() {
@@ -71,6 +65,15 @@ static inline TimeUnit getTimeStop() {
   return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
 }
 
+#else
+
+#include <sys/time.h>
+typedef unsigned long long TimeUnit;
+static inline TimeUnit getTime() {
+    timeval tv;
+    gettimeofday(&tv, 0);
+    return (tv.tv_sec*(unsigned long long )1000000+tv.tv_usec);
+}
 
 #endif
 

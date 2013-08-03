@@ -26,7 +26,6 @@ template<> struct AtomicImplAux<4> {
     template<typename T> static T increase_nv(T *ptr) { return atomic_inc_32_nv(ptr); }
     template<typename T> static T decrease_nv(T *ptr) { return atomic_dec_32_nv(ptr); }
     template<typename T> static T cas(volatile T *ptr, T oldval, T newval) { return atomic_cas_32(ptr, oldval, newval); }
-    template<typename T> static void clear(volatile T *ptr) { atomic_and_32(ptr, 0); }
 };
 
 #if defined(_INT64_TYPE)
@@ -36,7 +35,6 @@ template<> struct AtomicImplAux<8> {
     template<typename T> static T increase_nv(T *ptr) { return atomic_inc_64_nv(ptr); }
     template<typename T> static T decrease_nv(T *ptr) { return atomic_dec_64_nv(ptr); }
     template<typename T> static T cas(volatile T *ptr, T oldval, T newval) { return atomic_cas_64(ptr, oldval, newval); }
-    template<typename T> static void clear(volatile T *ptr) { atomic_and_64(ptr, 0); }
 };
 #endif
 
@@ -46,8 +44,7 @@ struct AtomicImpl {
     template<typename T> static T increase_nv(T *ptr) { return AtomicImplAux<sizeof(T)>::increase_nv(ptr); }
     template<typename T> static T decrease_nv(T *ptr) { return AtomicImplAux<sizeof(T)>::decrease_nv(ptr); }
     template<typename T> static T cas(volatile T *ptr, T oldval, T newval) { return AtomicImplAux<sizeof(T)>::cas(ptr, oldval, newval); }
-    template<typename T> static void clear(volatile T *ptr) { AtomicImplAux<sizeof(T)>::clear(ptr); }
-
+    
     static void memory_fence_enter() {
         // Any store preceding membar_enter() will reach global visibility
         // before all loads and stores following it.
@@ -105,65 +102,50 @@ struct AtomicImpl {
 };
 #endif // __SUNPRO_CC
 
-#if defined(__INTEL_COMPILER)
-
+#if defined(__INTEL_COMPILER) || defined(__GNUC__)
 struct AtomicImpl {
     template<typename T> static void increase(T *ptr) { __sync_add_and_fetch(ptr, 1); }
     template<typename T> static void decrease(T *ptr) { __sync_sub_and_fetch(ptr, 1); }
+    template<typename T> static T add_nv(T *ptr, size_t n) { return __sync_add_and_fetch(ptr, n); }
     template<typename T> static T increase_nv(T *ptr) { return __sync_add_and_fetch(ptr, 1); }
     template<typename T> static T decrease_nv(T *ptr) { return __sync_sub_and_fetch(ptr, 1); }
     template<typename T> static T cas(volatile T *ptr, T oldval, T newval) { return __sync_val_compare_and_swap(ptr, oldval, newval); }
-    template<typename T> static void clear(volatile T *ptr) { __sync_and_and_fetch(ptr, 0); }
+
+    static bool lock_test_and_set(volatile unsigned int *ptr) { return __sync_lock_test_and_set(ptr, 1) == 0; }
+    static void lock_release(volatile unsigned int *ptr) { __sync_lock_release(ptr); }
+
+    static void yield() { sched_yield(); }
+    static void compiler_fence() { __asm __volatile ("":::"memory"); }
 
 #if defined(__SSE2__)
+
+#if defined(__INTEL_COMPILER)
     static void memory_fence_enter() { _mm_mfence(); }
     static void memory_fence_exit() { _mm_mfence(); }
     static void memory_fence_producer() { _mm_mfence(); }
     static void memory_fence_consumer() { _mm_mfence(); }
-#else
-    static void memory_fence_enter() { __asm __volatile ("":::"memory"); }
-    static void memory_fence_exit() { __asm __volatile ("":::"memory"); }
-    static void memory_fence_producer() { __asm __volatile ("":::"memory"); }
-    static void memory_fence_consumer() { __asm __volatile ("":::"memory"); }
-#endif
-
-    static bool lock_test_and_set(volatile unsigned int *ptr) { return __sync_lock_test_and_set(ptr, 1) == 0; }
-    static void lock_release(volatile unsigned int *ptr) { __sync_lock_release(ptr); }
-
-    static void yield() { sched_yield(); }
-    static void rep_nop() { __asm __volatile ("rep;nop": : :"memory"); }
-    static void compiler_fence() { __asm __volatile ("":::"memory"); }
-};
-
-#elif defined(__GNUC__)
-struct AtomicImpl {
-    template<typename T> static void increase(T *ptr) { __sync_add_and_fetch(ptr, 1); }
-    template<typename T> static void decrease(T *ptr) { __sync_sub_and_fetch(ptr, 1); }
-    template<typename T> static T increase_nv(T *ptr) { return __sync_add_and_fetch(ptr, 1); }
-    template<typename T> static T decrease_nv(T *ptr) { return __sync_sub_and_fetch(ptr, 1); }
-    template<typename T> static T cas(volatile T *ptr, T oldval, T newval) { return __sync_val_compare_and_swap(ptr, oldval, newval); }
-    template<typename T> static void clear(volatile T *ptr) { __sync_and_and_fetch(ptr, 0); }
-
-#if defined(__SSE2__)
+#else // defined(__INTEL_COMPILER)
     static void memory_fence_enter() { __builtin_ia32_mfence(); }
     static void memory_fence_exit() { __builtin_ia32_mfence(); }
     static void memory_fence_producer() { __builtin_ia32_mfence(); }
     static void memory_fence_consumer() { __builtin_ia32_mfence(); }
-#else
+#endif // defined(__INTEL_COMPILER)
+
+#else // defined(__SSE2__)
     static void memory_fence_enter() { __asm __volatile ("":::"memory"); }
     static void memory_fence_exit() { __asm __volatile ("":::"memory"); }
     static void memory_fence_producer() { __asm __volatile ("":::"memory"); }
     static void memory_fence_consumer() { __asm __volatile ("":::"memory"); }
-#endif
+#endif // defined(__SSE2__)
 
-    static bool lock_test_and_set(volatile unsigned int *ptr) { return __sync_lock_test_and_set(ptr, 1) == 0; }
-    static void lock_release(volatile unsigned int *ptr) { __sync_lock_release(ptr); }
 
-    static void yield() { sched_yield(); }
+#if __ARM_ARCH_7__ || __ARM_ARCH_7A__ || __ARM_ARCH_7R__ || __ARM_ARCH_7M__
+    static void rep_nop() { __asm __volatile ("": : :"memory"); }
+#else
     static void rep_nop() { __asm __volatile ("rep;nop": : :"memory"); }
-    static void compiler_fence() { __asm __volatile ("":::"memory"); }
+#endif
 };
-#endif // __GNUC__
+#endif // defined(__INTEL_COMPILER) or defined(__GNUC__)
 
 
 #if defined(_MSC_VER)
@@ -187,19 +169,18 @@ struct AtomicImpl {
 struct Atomic {
     template<typename T> static void increase(T *ptr) { detail::AtomicImpl::increase(ptr); }
     template<typename T> static void decrease(T *ptr) { detail::AtomicImpl::decrease(ptr); }
+    template<typename T> static T add_nv(T *ptr, size_t n) { return detail::AtomicImpl::add_nv(ptr, n); }
     template<typename T> static T increase_nv(T *ptr) { return detail::AtomicImpl::increase_nv(ptr); }
     template<typename T> static T decrease_nv(T *ptr) { return detail::AtomicImpl::decrease_nv(ptr); }
     template<typename T> static T cas(volatile T *ptr, T oldval, T newval) { return detail::AtomicImpl::cas(ptr, oldval, newval); }
     template<typename T> static T swap(volatile T *ptr, T newval) {
-        T prev;
-        T oldval = 0;
-        do {
-            prev = oldval;
-            oldval = detail::AtomicImpl::cas(ptr, prev, newval);
-        } while (oldval != prev);
-        return oldval;
+        for (;;) {
+            T prev = *ptr;
+            T oldval = detail::AtomicImpl::cas(ptr, prev, newval);
+            if (oldval == prev)
+                return oldval;
+        }
     }
-    template<typename T> static void clear(volatile T *ptr) { detail::AtomicImpl::clear(ptr); }
 
     // test to grab a lock (true = success, you now own the lock), and perform the required memory barriers
     static bool lock_test_and_set(volatile unsigned int *ptr) { return detail::AtomicImpl::lock_test_and_set(ptr); }
@@ -212,7 +193,10 @@ struct Atomic {
     static void memory_fence_producer() { detail::AtomicImpl::memory_fence_producer(); }
     static void memory_fence_consumer() { detail::AtomicImpl::memory_fence_consumer(); }
     static void yield() { detail::AtomicImpl::yield(); }
+
+    // rep_nop issues the "pause" instruction. also clobbers memory.
     static void rep_nop() { detail::AtomicImpl::rep_nop(); }
+
     static void compiler_fence() { detail::AtomicImpl::compiler_fence(); }
 };
 
