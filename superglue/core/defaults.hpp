@@ -37,7 +37,7 @@ struct DefaultOptions {
     typedef Disable HandleName;          // handles have setName() and getName() methods
     typedef Disable HandleId;            // handels have a getGlobalId() method
     typedef Enable Lockable;             // handles can be locked
-    typedef Disable ThreadSafeSubmit;    // submitting tasks is thread safe
+    typedef Enable ThreadSafeSubmit;     // submitting tasks is thread safe
     typedef Disable SubTasks;            // TaskExecutor has addSubTask() method
     typedef Disable PassTaskExecutor;    // the Task::run() method is called with the current TaskExecutor as parameter
     typedef Disable ThreadWorkspace;     // TaskExecutor have a getThreadWorkspace() method

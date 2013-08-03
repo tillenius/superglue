@@ -24,8 +24,6 @@ class TestSchedulerVer : public TestCase {
 
     static bool testSchedVer(std::string &name) { name = "testSchedVer";
         SchedulerVersion<OpDefault> s;
-        if (sizeof(s) > (OpDefault::AccessInfoType::numAccesses-1) * sizeof(OpDefault::version_t))
-            return false;
 
         if (s.nextVersion() != 1) return false;
         if (s.nextVersion() != 1) return false;
@@ -42,8 +40,6 @@ class TestSchedulerVer : public TestCase {
         if (s.nextVersion() != 7) return false;
 
         SchedulerVersion<OpMul> s2;
-        if (sizeof(s2) > OpMul::AccessInfoType::numAccesses * sizeof(OpMul::version_t))
-            return false;
 
         if (s2.nextVersion() != 1) return false;
         if (s2.nextVersion() != 1) return false;
