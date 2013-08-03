@@ -79,6 +79,8 @@ struct DefaultOptions {
         }
     };
     typedef FreeTaskDefault FreeTask;
+
+    typedef struct {} UserThreadData;
 };
 
 #endif // __DEFAULTS_HPP__
