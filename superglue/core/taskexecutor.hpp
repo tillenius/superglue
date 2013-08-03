@@ -80,7 +80,7 @@ struct TaskExecutor_PassTaskExecutor<Options, typename Options::Disable> {
 template<typename Options>
 struct TaskExecutor_PassTaskExecutor<Options, typename Options::Enable> {
     void invokeTaskImpl(TaskBase<Options> *task) {
-        task->run(static_cast<TaskExecutor<Options> *>(this));
+        task->run(static_cast<TaskExecutor<Options> &>(*this));
     }
 };
 
@@ -248,7 +248,7 @@ public:
     TaskExecutor(int id_, ThreadManager<Options> &tm_)
       : id(id_), tm(tm_)
     {
-        Options::TaskExecutorInstrumentation::init();
+        Options::TaskExecutorInstrumentation::init(*this);
     }
 
     ~TaskExecutor() {

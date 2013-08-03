@@ -13,16 +13,19 @@ public:
 template<> struct ReadWriteAdd::AccessType<ReadWriteAdd::read> {
     enum { commutative = 1 };
     enum { exclusive = 0 };
+    enum { readonly = 1 };
 };
 
 template<> struct ReadWriteAdd::AccessType<ReadWriteAdd::write> {
     enum { commutative = 0 };
     enum { exclusive = 1 };
+    enum { readonly = 0 };
 };
 
 template<> struct ReadWriteAdd::AccessType<ReadWriteAdd::add> {
     enum { commutative = 1 };
     enum { exclusive = 1 };
+    enum { readonly = 0 };
 };
 
 // =====================================================================
@@ -37,11 +40,13 @@ public:
 template<> struct ReadWrite::AccessType<ReadWrite::read> {
     enum { commutative = 1 };
     enum { exclusive = 0 };
+    enum { readonly = 1 };
 };
 
 template<> struct ReadWrite::AccessType<ReadWrite::write> {
     enum { commutative = 0 };
     enum { exclusive = 1 };
+    enum { readonly = 0 };
 };
 
 // ============================================================================
@@ -56,16 +61,19 @@ public:
 template<> struct ReadWriteConcurrent::AccessType<ReadWriteConcurrent::read> {
     enum { commutative = 1 };
     enum { exclusive = 0 };
+    enum { readonly = 1 };
 };
 
 template<> struct ReadWriteConcurrent::AccessType<ReadWriteConcurrent::write> {
     enum { commutative = 0 };
     enum { exclusive = 1 };
+    enum { readonly = 0 };
 };
 
 template<> struct ReadWriteConcurrent::AccessType<ReadWriteConcurrent::concurrent> {
     enum { commutative = 1 };
     enum { exclusive = 0 };
+    enum { readonly = 0 };
 };
 
 namespace detail {

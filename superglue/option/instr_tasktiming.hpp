@@ -4,7 +4,7 @@
 template<typename Options>
 struct TaskExecutorTiming {
     Time::TimeUnit start, stop;
-    static void init() {}
+    static void init(TaskExecutor<Options> &te) {}
     static void destroy() {}
     void runTaskBefore(TaskBase<Options> *) {
         start = Time::getTime();
@@ -15,7 +15,6 @@ struct TaskExecutorTiming {
     }
     static void taskNotRunDeps() {}
     static void taskNotRunLock() {}
-    static void setMainThreadFlag() {}
 };
 
 #endif // __INSTR_TASKTIMING_HPP__

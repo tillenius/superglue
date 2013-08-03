@@ -53,7 +53,6 @@ public:
       : TaskExecutor<Options>(tm_.getNumQueues()-1, tm_),
         barrierCounter(0), state(0)
     {
-        Options::TaskExecutorInstrumentation::setMainThreadFlag();
     }
 
     void waitForWork() {

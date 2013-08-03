@@ -63,13 +63,12 @@ struct DefaultOptions {
 
     // Instrumentation
     struct TaskExecutorNoInstrumentation {
-        static void init() {}
+        static void init(TaskExecutor<Options> &) {}
         static void destroy() {}
         static void runTaskBefore(TaskBase<Options> *) {}
         static void runTaskAfter(TaskBase<Options> *) {}
         static void taskNotRunDeps() {}
         static void taskNotRunLock() {}
-        static void setMainThreadFlag() {}
     };
     typedef TaskExecutorNoInstrumentation TaskExecutorInstrumentation;
     

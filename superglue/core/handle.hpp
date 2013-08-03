@@ -255,10 +255,8 @@ public:
 
     HandleDefault() : version(0) {}
     ~HandleDefault() {
-        if (version != requiredVersion.nextVersion()-1) {
+        if (version != requiredVersion.nextVersion()-1)
             std::cerr<<"ver=" << version << " req=" << requiredVersion.nextVersion()-1 << std::endl;
-            raise(SIGINT);
-        }
         assert(version == requiredVersion.nextVersion()-1);
     }
 

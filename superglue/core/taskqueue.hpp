@@ -5,6 +5,7 @@
 #include "platform/spinlock.hpp"
 #include "core/log.hpp"
 
+template<typename, typename> class Log_DumpState;
 template<typename Options> class TaskBase;
 template<typename Options> class Log;
 
@@ -72,7 +73,7 @@ protected:
     TaskBase<Options> *first;
     TaskBase<Options> *last;
 
-    template<typename, typename> friend struct detail::Log_DumpState;
+    template<typename, typename> friend struct Log_DumpState;
 
 public:
     TaskQueueUnsafe() : first(0), last(0) {}
@@ -228,7 +229,7 @@ private:
     TaskQueue(const TaskQueue &);
     const TaskQueue &operator=(const TaskQueue &);
 
-    template<typename, typename> friend struct detail::Log_DumpState;
+    template<typename, typename> friend struct Log_DumpState;
 
     SpinLock &getLock() { return spinlock; }
     TaskQueueUnsafe<Options> &getUnsafeQueue() { return *this; }

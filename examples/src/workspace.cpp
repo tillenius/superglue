@@ -13,11 +13,11 @@ struct MyTask : public Task<Options> {
     MyTask(int *a_) : a(a_) {}
 
     // The run() method now takes a TaskExecutor<Options> * parameter.
-    void run(TaskExecutor<Options> *te) {
+    void run(TaskExecutor<Options> &te) {
         // Allocate some memory
-        int *mem1 = (int *) te->getThreadWorkspace(1024 * sizeof(int));
+        int *mem1 = (int *) te.getThreadWorkspace(1024 * sizeof(int));
         // Allocate some more memory
-        int *mem2 = (int *) te->getThreadWorkspace(1024 * sizeof(int));
+        int *mem2 = (int *) te.getThreadWorkspace(1024 * sizeof(int));
 
         // Fill the allocated memory
         for (int i = 0; i < 1024; ++i)

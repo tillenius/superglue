@@ -1,6 +1,7 @@
 #ifndef __TASK_HPP__
 #define __TASK_HPP__
 
+#include "core/log_dag.hpp"
 #include "core/types.hpp"
 #include "core/accessutil.hpp"
 #include "platform/atomic.hpp"
@@ -87,7 +88,7 @@ struct Task_PassTaskExecutor<Options, typename Options::Disable> {
 
 template<typename Options>
 struct Task_PassTaskExecutor<Options, typename Options::Enable> {
-    virtual void run(TaskExecutor<Options> *) = 0;
+    virtual void run(TaskExecutor<Options> &) = 0;
 };
 
 // ============================================================================
@@ -210,7 +211,7 @@ public:
         a = Access<Options>(handle, handle->schedule(type));
         if (AccessUtil<Options>::needsLock(type))
              a.setNeedsLock(true);
-        Log<Options>::addDependency(static_cast<TaskBase<Options> *>(this), &a, type);
+        Log_DAG<Options>::dag_addDependency(static_cast<TaskBase<Options> *>(this), &a, type);
     }
 };
 
@@ -233,7 +234,7 @@ public:
         Access<Options> &a(access[access.size()-1]);
         if (AccessUtil<Options>::needsLock(type))
              a.setNeedsLock(true);
-        Log<Options>::addDependency(static_cast<TaskBase<Options> *>(this), &a, type);
+        Log_DAG<Options>::dag_addDependency(static_cast<TaskBase<Options> *>(this), &a, type);
         ++TaskBase<Options>::numAccess;
         TaskBase<Options>::accessPtr = &access[0]; // vector may be reallocated at any add
     }

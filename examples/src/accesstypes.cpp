@@ -22,21 +22,25 @@ public:
 template<> struct ReadWriteAddMul::AccessType<ReadWriteAddMul::read> {
     enum { commutative = 1 };
     enum { exclusive = 0 };
+    enum { readonly = 1 };
 };
 
 template<> struct ReadWriteAddMul::AccessType<ReadWriteAddMul::write> {
     enum { commutative = 0 };
     enum { exclusive = 1 };
+    enum { readonly = 0 };
 };
 
 template<> struct ReadWriteAddMul::AccessType<ReadWriteAddMul::add> {
     enum { commutative = 1 };
     enum { exclusive = 1 };
+    enum { readonly = 0 };
 };
 
 template<> struct ReadWriteAddMul::AccessType<ReadWriteAddMul::mul> {
     enum { commutative = 1 };
     enum { exclusive = 1 };
+    enum { readonly = 0 };
 };
 
 //===========================================================================

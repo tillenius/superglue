@@ -44,6 +44,16 @@ public:
         enum { result = ((T::exclusive == 0) && (T::commutative == 1)) ? 1 : 0 };
     };
 
+    template<typename T>
+    struct CommutativePredicate {
+        enum { result = T::commutative };
+    };
+
+    template<typename T>
+    struct ReadOnlyPredicate {
+        enum { result = T::readonly };
+    };
+
     template< template<typename T> class Predicate >
     struct AnyType {
         enum { result = AnyTypeAux<AccessInfo::numAccesses, Predicate>::result };
@@ -55,6 +65,14 @@ public:
 
     static bool concurrent(int type) {
         return Aux<AccessInfo::numAccesses, ConcurrentPredicate>::check(type);
+    }
+
+    static bool commutative(int type) {
+        return Aux<AccessInfo::numAccesses, CommutativePredicate>::check(type);
+    }
+
+    static bool readonly(int type) {
+        return Aux<AccessInfo::numAccesses, ReadOnlyPredicate>::check(type);
     }
 };
 

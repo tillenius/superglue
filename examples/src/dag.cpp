@@ -1,5 +1,7 @@
 #include "superglue.hpp"
 #include <iostream>
+#include "option/log_dag_task.hpp"
+#include "option/log_dag_data.hpp"
 
 struct Options : public DefaultOptions<Options> {
     typedef Enable Logging_DAG;
@@ -44,11 +46,17 @@ struct trsm : public Task<Options> {
 
 int main() {
 
-    const size_t numBlocks = 4;
+    const size_t numBlocks = 3;
 
     Handle<Options> **A = new Handle<Options>*[numBlocks];
-    for (size_t i = 0; i < numBlocks; ++i)
+    for (size_t i = 0; i < numBlocks; ++i) {
         A[i] = new Handle<Options>[numBlocks];
+        for (size_t j = 0; j < numBlocks; ++j) {
+            std::stringstream ss;
+            ss<<"("<<i<<","<<j<<")";
+            A[i][j].setName(ss.str().c_str());
+        }
+    }
 
     ThreadManager<Options> tm(0);
 
@@ -73,6 +81,7 @@ int main() {
         }
     }
     tm.barrier();
-    Log<Options>::dump_dag("cholesky.dot");
+    Log_DAG_task<Options>::dump("cholesky.dot");
+    Log_DAG_data<Options>::dump("cholesky_data.dot");
     return 0;
 }
