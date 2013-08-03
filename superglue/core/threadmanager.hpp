@@ -6,6 +6,8 @@
 // Creates and owns the worker threads and task pools.
 
 #include "platform/threads.hpp"
+#include "platform/mutex.hpp"
+#include "platform/barrier.hpp"
 #include "core/barrierprotocol.hpp"
 
 template <typename Options> class TaskBase;

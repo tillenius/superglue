@@ -9,11 +9,6 @@
 //   Signal
 //   SignalLock
 //   SignalTryLock
-//   Barrier
-
-#include <iostream>
-#include <sstream>
-#include <cassert>
 
 class Signal;
 
@@ -202,44 +197,6 @@ public:
     }
     bool isLocked() {
         return success;
-    }
-};
-
-//class Barrier {
-//    Barrier(const Barrier &);
-//    const Barrier &operator=(const Barrier &);
-//private:
-//    pthread_barrier_t barrier;
-//
-//public:
-//    Barrier(size_t numThreads) {
-//        assert(pthread_barrier_init(&barrier, NULL, numThreads) == 0);
-//    }
-//    ~Barrier() {
-//        pthread_barrier_destroy(&barrier);
-//    }
-//    // spurious wake-ups from Barrier.wait are NOT accepted!
-//    void wait() {
-//        int res = pthread_barrier_wait(&barrier);
-//        assert(res == PTHREAD_BARRIER_SERIAL_THREAD || res == 0);
-//    }
-//};
-
-class Barrier {
-    Barrier(const Barrier &);
-    const Barrier &operator=(const Barrier &);
-private:
-    size_t counter;
-
-public:
-    Barrier(size_t numThreads) {
-        counter = numThreads;
-    }
-    // Spurious wake-ups from Barrier.wait are NOT accepted
-    void wait() {
-        Atomic::decrease(&counter);
-        while (counter > 0)
-            Atomic::yield();
     }
 };
 
@@ -451,29 +408,6 @@ public:
     }
     bool isLocked() {
         return (success && !released);
-    }
-};
-
-class Barrier {
-private:
-    Signal signal;
-    volatile int counter;
-
-public:
-    Barrier(size_t numThreads) {
-        counter = numThreads;
-    }
-    ~Barrier() {}
-
-    // Spurious wake-ups from Barrier.wait are NOT accepted
-    void wait() {
-        SignalLock lock(signal);
-        if (--counter == 0) {
-            lock.broadcast();
-            return;
-        }
-        while (counter > 0)
-            lock.wait();
     }
 };
 
