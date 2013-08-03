@@ -28,9 +28,10 @@ public:
         free(temp);
     }
     static size_t dataOffset() {
-        return (sizeof(Contribution<T>) + 0x3) & ~0x3; // align upwards to multiple of 4
-
+		// align upwards to multiple of 4
+        return (sizeof(Contribution<T>) + 0x3) & ~static_cast<size_t>(0x3); 
     }
+
     static T *getData(Contribution<T> &c) {
         return (T*) (((char *) &c) + dataOffset());
     }
