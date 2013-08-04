@@ -46,11 +46,16 @@ template<typename Options, typename T = typename Options::Stealing> struct TaskE
 template<typename Options>
 struct TaskExecutor_Stealing<Options, typename Options::Disable> {
     static TaskBase<Options> *steal() { return 0; }
+    static void init_stealing(TaskExecutor<Options> *) {}
 };
 
 template<typename Options>
 struct TaskExecutor_Stealing<Options, typename Options::Enable> {
-    template<typename Ops, typename T2> struct SetStolen;
+    typename Options::StealOrder stealorder;
+
+    void init_stealing(TaskExecutor<Options> *te) {
+        stealorder.init(te);
+    }
 
     static void setStolen(TaskBase<Options> *, typename Options::Disable) {};
     static void setStolen(TaskBase<Options> *task, typename Options::Enable) {
@@ -60,7 +65,7 @@ struct TaskExecutor_Stealing<Options, typename Options::Enable> {
     TaskBase<Options> *steal() {
         TaskExecutor<Options> *this_(static_cast<TaskExecutor<Options> *>(this));
         TaskBase<Options> *task = 0;
-        if (!Options::StealOrder::steal(this_->getThreadManager(), this_->getId(), task))
+        if (!stealorder.steal(this_->getThreadManager(), this_->getId(), task))
             return 0;
 
         setStolen(task, typename Options::TaskStolenFlag());
@@ -251,6 +256,7 @@ public:
       : id(id_), tm(tm_)
     {
         Options::TaskExecutorInstrumentation::init(*this);
+        this->init_stealing(this);
     }
 
     ~TaskExecutor() {
