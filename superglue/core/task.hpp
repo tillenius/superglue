@@ -138,6 +138,22 @@ public:
     Task_ListQueue() : nextPrev(0) {}
 };
 
+// ============================================================================
+// Option Subtasks
+// ============================================================================
+template<typename Options, typename T = typename Options::Subtasks> class Task_Subtasks;
+
+template<typename Options>
+class Task_Subtasks<Options, typename Options::Disable> {};
+
+template<typename Options>
+class Task_Subtasks<Options, typename Options::Enable> {
+public:
+    size_t subtask_count;
+    TaskBase<Options> *parent;
+    Task_Subtasks() : subtask_count(0), parent(NULL) {}
+};
+
 } // namespace detail
 
 // ============================================================================
@@ -151,7 +167,8 @@ class TaskBaseDefault
     public detail::Task_TaskName<Options>,
     public detail::Task_Priorities<Options>,
     public detail::Task_StealableFlag<Options>,
-    public detail::Task_Contributions<Options>
+    public detail::Task_Contributions<Options>,
+    public detail::Task_Subtasks<Options>
 {
     template<typename, typename> friend class Task_PassThreadId;
     template<typename, typename> friend struct Task_AccessData;
@@ -227,6 +244,7 @@ class TaskDefault<Options, -1> : public TaskBase<Options> {
     typedef typename Options::AccessInfoType AccessInfo;
     typedef typename AccessInfo::Type AccessType;
     typedef typename Types<Options>::template vector_t< Access<Options> >::type access_vector_t;
+protected:
     access_vector_t access;
 public:
     void registerAccess(AccessType type, Handle<Options> *handle) {
@@ -243,8 +261,5 @@ public:
 // export "Options::TaskType<>::type" (default: TaskDefault) as type Task
 template<typename Options, int N = -1> class Task
  : public Options::template TaskType<N>::type {};
-
-// export "Options::TaskDynamicType" (default: TaskDynamic_) as type TaskDynamic
-template<typename Options> class TaskDynamic : public Options::TaskDynamicType {};
 
 #endif // __TASK_HPP__

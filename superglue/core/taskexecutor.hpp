@@ -1,42 +1,13 @@
 #ifndef __TASKEXECUTOR_HPP__
 #define __TASKEXECUTOR_HPP__
 
+#include "core/log_dag.hpp"
+
 template<typename Options> class TaskQueue;
 template<typename Options> class ThreadManager;
 template<typename Options> class TaskExecutor;
 
 namespace detail {
-
-// ===========================================================================
-// Option SubTasks
-// ===========================================================================
-template<typename Options, typename T = typename Options::SubTasks> struct TaskExecutor_SubTasks;
-
-template<typename Options>
-struct TaskExecutor_SubTasks<Options, typename Options::Disable> {};
-
-template<typename Options>
-struct TaskExecutor_SubTasks<Options, typename Options::Enable> {
-
-    static bool checkDependencies(TaskBase<Options> *task, typename Options::LazyDependencyChecking) {
-        return true;
-    }
-    static bool checkDependencies(TaskBase<Options> *task, typename Options::EagerDependencyChecking) {
-        return task->areDependenciesSolvedOrNotify();
-    }
-
-    // called to create task from a task.
-    // task gets assigned to calling task executor
-    // task added to front of queue
-    void addSubTask(TaskBase<Options> *task) {
-        TaskExecutor<Options> *this_((TaskExecutor<Options> *)(this));
-
-        if (!checkDependencies(task, typename Options::DependencyChecking()))
-            return;
-
-        this_->getTaskQueue().push_front(task);
-    }
-};
 
 // ============================================================================
 // Option NoStealing
@@ -150,6 +121,60 @@ public:
     TaskBase<Options> *getCurrentTask() { return currentTask; }
 };
 
+
+// ============================================================================
+// Option Subtasks
+// ============================================================================
+template<typename Options, typename T = typename Options::Subtasks> class TaskExecutor_Subtasks;
+
+template<typename Options>
+class TaskExecutor_Subtasks<Options, typename Options::Disable> {
+public:
+    void finished(TaskBase<Options> *task) {
+        TaskExecutor<Options> *this_(static_cast<TaskExecutor<Options> *>(this));
+        this_->release_task(task);
+    }
+};
+
+template<typename Options>
+class TaskExecutor_Subtasks<Options, typename Options::Enable> {
+public:
+    void subtask(TaskBase<Options> *parent, TaskBase<Options> *task) {
+        TaskExecutor<Options> *this_(static_cast<TaskExecutor<Options> *>(this));
+
+        if (parent->subtask_count == 0)
+            parent->subtask_count = 2;
+        else
+            Atomic::increase(&parent->subtask_count);
+        task->parent = parent;
+        this_->submit(task);
+    }
+
+    void finished(TaskBase<Options> *task) {
+        TaskExecutor<Options> *this_(static_cast<TaskExecutor<Options> *>(this));
+
+        if (task->subtask_count == 0) {
+            // no subtasks, we release the task immediately
+            this_->release_task(task);
+            return;
+        }
+
+        TaskBase<Options> *current_parent = task->parent;
+        while (current_parent != NULL) {
+            // this task is a subtask of some other task
+
+            if (Atomic::decrease_nv(&current_parent->subtask_count) > 0)
+                break;
+
+            // release parent and continue to parent's parent
+            TaskBase<Options> *next_parent = current_parent->parent;
+            this_->release_task(current_parent);
+            current_parent = next_parent;
+        }
+
+    }
+};
+
 } // namespace detail
 
 // ============================================================================
@@ -161,7 +186,7 @@ class TaskExecutor
     public detail::TaskExecutor_GetThreadWorkspace<Options>,
     public detail::TaskExecutor_PassTaskExecutor<Options>,
     public detail::TaskExecutor_Stealing<Options>,
-    public detail::TaskExecutor_SubTasks<Options>,
+    public detail::TaskExecutor_Subtasks<Options>,
     public Options::TaskExecutorInstrumentation
 {
     template<typename, typename> friend struct TaskExecutor_Stealing;
@@ -193,19 +218,7 @@ public:
 
         Options::TaskExecutorInstrumentation::runTaskAfter(task);
 
-        finished(task);
-    }
-
-    void finished(TaskBase<Options> *task) {
-        const size_t numAccess = task->getNumAccess();
-        Access<Options> *access(task->getAccess());
-        for (size_t i = numAccess; i > 0; --i) {
-            if (access[i-1].useContrib())
-                access[i-1].getHandle()->increaseCurrentVersionNoUnlock(*this);
-            else
-                access[i-1].getHandle()->increaseCurrentVersion(*this);
-        }
-        Options::FreeTask::free(task);
+        detail::TaskExecutor_Subtasks<Options>::finished(task);
     }
 
     static bool dependenciesReadyAtExecution(TaskBase<Options> *task, typename Options::LazyDependencyChecking) {
@@ -256,6 +269,21 @@ public:
 
     static bool dependenciesReadyAtSubmit(TaskBase<Options> *, typename Options::LazyDependencyChecking) {
         return true;
+    }
+
+    void release_task(TaskBase<Options> *task) {
+        TaskExecutor<Options> *this_(static_cast<TaskExecutor<Options> *>(this));
+
+        const size_t numAccess = task->getNumAccess();
+        Access<Options> *access(task->getAccess());
+        for (size_t i = numAccess; i > 0; --i) {
+            if (access[i-1].useContrib())
+                access[i-1].getHandle()->increaseCurrentVersionNoUnlock(*this_);
+            else
+                access[i-1].getHandle()->increaseCurrentVersion(*this_);
+            Log_DAG<Options>::dag_taskFinish(task, access[i-1].getHandle(), 0); // error: don't know version here
+        }
+        Options::FreeTask::free(task);
     }
 
 public:

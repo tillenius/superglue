@@ -143,7 +143,22 @@ public:
         return true;
     }
 
-#ifdef DEBUG_TASKQUEUE
+    template<typename Visitor>
+    void visit(Visitor &visitor) {
+
+        TaskBase<Options> *curr(first);
+        TaskBase<Options> *prev(0);
+        TaskBase<Options> *next;
+
+        for (;curr != 0;) {
+            visitor.visit(curr);
+            next = reinterpret_cast<TaskBase<Options> *>(
+                reinterpret_cast<std::ptrdiff_t>(prev) + curr->nextPrev);
+            prev = curr;
+            curr = next;
+        }
+    }
+
     void dump() {
         if (first == 0) {
             std::cerr << "[Empty]" << std::endl;
@@ -165,7 +180,6 @@ public:
             curr = next;
         }
     }
-#endif // DEBUG_TASKQUEUE
 
     template<typename Pred>
     void erase_if(Pred) {
@@ -217,8 +231,27 @@ public:
         std::swap(first, rhs.first);
         std::swap(last, rhs.last);
     }
-};
 
+    size_t size() const {
+        if (first == 0)
+            return 0;
+
+        TaskBase<Options> *curr(first);
+        TaskBase<Options> *prev(0);
+        TaskBase<Options> *next;
+
+        size_t count = 0;
+        for (;;) {
+            ++count;
+            next = reinterpret_cast<TaskBase<Options> *>(
+                reinterpret_cast<std::ptrdiff_t>(prev) + curr->nextPrev);
+            if (next == 0)
+                return count;
+            prev = curr;
+            curr = next;
+        }
+    }
+};
 
 template<typename Options>
 class TaskQueue : public TaskQueueUnsafe<Options> {
@@ -262,6 +295,13 @@ public:
         if (!TaskQueueUnsafe<Options>::gotWork())
             return false;
         SpinLockScoped lock(spinlock);
+        return TaskQueueUnsafe<Options>::steal(elem);
+    }
+
+    bool try_steal(TaskBase<Options> * &elem) {
+        SpinLockTryLock lock(spinlock);
+        if (!lock.success)
+            return false;
         return TaskQueueUnsafe<Options>::steal(elem);
     }
 

@@ -1,7 +1,6 @@
 #include "superglue.hpp"
 #include "core/contrib.hpp"
 
-#include "platform/mutex.hpp"
 #include "platform/gettime.hpp"
 
 class TestCase {
@@ -22,6 +21,7 @@ public:
 #include "unit/test_locks.hpp"
 #include "unit/test_listqueue.hpp"
 #include "unit/test_rwc.hpp"
+#include "unit/test_subtasks.hpp"
 
 int main(int argc, char *argv[]) {
     size_t numTests = 0;
@@ -36,7 +36,8 @@ int main(int argc, char *argv[]) {
         new TestTasks(),
         new TestLocks(),
         new TestListQueue(),
-        new TestRWC()
+        new TestRWC(),
+        new TestSubtasks()
     };
 
     for (size_t i = 0; i < sizeof(modules)/sizeof(TestCase*); ++i) {
