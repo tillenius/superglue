@@ -148,20 +148,14 @@ private:
     // Notify lock listeners when the lock is released
     void notifyLockListeners(TaskExecutor<Options> &taskExecutor) {
 
-        if (!wakeLockQueue(taskExecutor))
-            return;
-
-        taskExecutor.getThreadManager().signalNewWork();
-    }
-
-    bool wakeLockQueue(TaskExecutor<Options> &taskExecutor) {
         TaskQueueUnsafe<Options> wake;
         lockListenerList.swap(wake);
         if (!wake.gotWork())
-            return false;
+            return;
 
         taskExecutor.getTaskQueue().push_front_list(wake);
-        return true;
+
+        taskExecutor.getThreadManager().signalNewWork();
     }
 
 public:
@@ -267,7 +261,7 @@ public:
         return requiredVersion.schedule(type);
     }
 
-    bool isVersionAvailableOrNotify(TaskBase<Options> *listener, version_t requiredVersion_) {
+    bool isVersionAvailableOrNotify(TaskBase<Options> *task, version_t requiredVersion_) {
 
         // check if required version is available
         if ( (int) (version - requiredVersion_) >= 0)
@@ -279,10 +273,9 @@ public:
         if ( (int) (version - requiredVersion_) >= 0)
             return true;
 
-        queue.addVersionListener(listener, requiredVersion_);
+        queue.addVersionListener(task, requiredVersion_);
         return false;
     }
-
 };
 
 template<typename Options> class Handle : public Options::HandleType {};
