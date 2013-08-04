@@ -11,6 +11,8 @@
 #include "core/barrierprotocol.hpp"
 #include "core/log.hpp"
 
+#include <cassert>
+
 template <typename Options> class TaskBase;
 template <typename Options> class TaskQueue;
 template <typename Options> class WorkerThread;
@@ -131,6 +133,8 @@ public:
       : numWorkers(numWorkers_ == -1 ? decideNumWorkers() : numWorkers_),
         barrierProtocol(*this)
     {
+        assert(numWorkers_ == -1 || numWorkers_ >= 0);
+
         Options::HardwareModel::init();
         ThreadUtil::setAffinity(Options::HardwareModel::cpumap(0));
         taskQueues = new TaskQueue<Options> *[getNumQueues()];
@@ -180,9 +184,10 @@ public:
     static size_t decideNumWorkers() {
         const char *var = getenv("OMP_NUM_THREADS");
         if (var != NULL) {
-            const int intvar(atoi(var));
-            if (intvar != 0)
-                return atoi(var)-1;
+            const int OMP_NUM_THREADS(atoi(var));
+			assert(OMP_NUM_THREADS >= 0);
+            if (OMP_NUM_THREADS != 0)
+                return OMP_NUM_THREADS-1;
         }
         return ThreadUtil::getNumCPUs()-1;
     }
