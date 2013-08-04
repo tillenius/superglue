@@ -6,14 +6,12 @@
 #include "core/taskqueue.hpp"
 #include "platform/spinlock.hpp"
 #include "platform/atomic.hpp"
-#include "core/log.hpp"
 #include <cassert>
 
 template<typename Options> class Handle;
 template<typename Options> class TaskBase;
 template<typename Options> class TaskExecutor;
 template<typename Options> class SchedulerVersion;
-template<typename Options> class Log;
 
 namespace detail {
 
@@ -128,11 +126,14 @@ template<typename Options, typename T = typename Options::Lockable> class Handle
 template<typename Options>
 class Handle_Lockable<Options, typename Options::Disable> {
 public:
-    void increaseCurrentVersionNoUnlock(TaskExecutor<Options> &taskExecutor) { increaseCurrentVersion(taskExecutor); }
-    void increaseCurrentVersion(TaskExecutor<Options> &taskExecutor) {
+    size_t increaseCurrentVersionNoUnlock(TaskExecutor<Options> &taskExecutor) { 
+        return increaseCurrentVersion(taskExecutor);
+    }
+    size_t increaseCurrentVersion(TaskExecutor<Options> &taskExecutor) {
         Handle<Options> *this_(static_cast<Handle<Options> *>(this));
-        this_->increaseCurrentVersionImpl();
+        size_t ver = this_->increaseCurrentVersionImpl();
         this_->versionQueue.notifyVersionListeners(taskExecutor, this_->version);
+        return ver;
     }
 };
 
@@ -186,29 +187,32 @@ public:
     }
 
     // for contributions that haven't actually got the lock
-    void increaseCurrentVersionNoUnlock(TaskExecutor<Options> &taskExecutor) {
+    size_t increaseCurrentVersionNoUnlock(TaskExecutor<Options> &taskExecutor) {
         Handle<Options> *this_(static_cast<Handle<Options> *>(this));
 
-        this_->increaseCurrentVersionImpl();
+        size_t ver = this_->increaseCurrentVersionImpl();
         this_->versionQueue.notifyVersionListeners(taskExecutor, this_->getCurrentVersion());
+        return ver;
     }
 
-    void increaseCurrentVersion(TaskExecutor<Options> &taskExecutor) {
+    size_t increaseCurrentVersion(TaskExecutor<Options> &taskExecutor) {
         Handle<Options> *this_(static_cast<Handle<Options> *>(this));
 
         // first check if we owned the lock before version is increased
         // (otherwise someone else might grab the lock in between)
+        size_t ver;
         if (dataLock.is_locked()) {
             dataLock.unlock();
             // (someone else can snatch the lock here. that is ok.)
-            Atomic::increase(&this_->version);
+            ver = Atomic::increase_nv(&this_->version);
             this_->versionQueue.notifyVersionListeners(taskExecutor, this_->version);
             notifyLockListeners(taskExecutor);
         }
         else {
-            Atomic::increase(&this_->version);
+            ver = Atomic::increase_nv(&this_->version);
             this_->versionQueue.notifyVersionListeners(taskExecutor, this_->version);
         }
+        return ver;
     }
 };
 
@@ -243,8 +247,8 @@ public:
     // next required version for each access type
     SchedulerVersion<Options> requiredVersion;
 
-    void increaseCurrentVersionImpl() {
-        Atomic::increase(&version);
+    size_t increaseCurrentVersionImpl() {
+        return Atomic::increase_nv(&version);
     }
 
     HandleDefault() : version(0) {}

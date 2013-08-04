@@ -277,11 +277,12 @@ public:
         const size_t numAccess = task->getNumAccess();
         Access<Options> *access(task->getAccess());
         for (size_t i = numAccess; i > 0; --i) {
+      	    size_t ver;
             if (access[i-1].useContrib())
-                access[i-1].getHandle()->increaseCurrentVersionNoUnlock(*this_);
+                ver = access[i-1].getHandle()->increaseCurrentVersionNoUnlock(*this_);
             else
-                access[i-1].getHandle()->increaseCurrentVersion(*this_);
-            Log_DAG<Options>::dag_taskFinish(task, access[i-1].getHandle(), 0); // error: don't know version here
+                ver = access[i-1].getHandle()->increaseCurrentVersion(*this_);
+            Log_DAG<Options>::dag_taskFinish(task, access[i-1].getHandle(), ver);
         }
         Options::FreeTask::free(task);
     }
