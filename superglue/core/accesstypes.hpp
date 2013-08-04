@@ -81,9 +81,10 @@ namespace detail {
 // Specialize SchedulerVersionImpl for ReadWriteAdd
 // to use 2 counters instead of 3
 template<typename, typename> class SchedulerVersionImpl;
-template<typename version_t>
-class SchedulerVersionImpl<version_t, ReadWriteAdd> {
+template<typename Options>
+class SchedulerVersionImpl<Options, ReadWriteAdd> {
 private:
+    typedef typename Options::version_t version_t;
     version_t requiredVersion[2];
 
 public:

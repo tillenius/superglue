@@ -1,13 +1,20 @@
 #ifndef __SCHEDULERVER_HPP__
 #define __SCHEDULERVER_HPP__
 
+#include "accessutil.hpp"
+
 #include <cstring> // memset
 #include <algorithm> // max_elements
 
 namespace detail {
-    template<typename version_t, typename AccessInfo>
+
+// overridden in accesstypes.hpp
+
+    // store next version for each type
+    template<typename Options, typename AccessInfo>
     class SchedulerVersionImpl {
     private:
+        typedef typename Options::version_t version_t;
 
         version_t requiredVersion[AccessInfo::numAccesses];
 
@@ -53,8 +60,8 @@ namespace detail {
 
     template<typename Options>
     class SchedulerVersion<Options, typename Options::Enable>
-     : public detail::SchedulerVersionImpl<typename Options::version_t, typename Options::AccessInfoType> {
-        typedef typename detail::SchedulerVersionImpl<typename Options::version_t, typename Options::AccessInfoType> parent;
+     : public detail::SchedulerVersionImpl<Options, typename Options::AccessInfoType> {
+        typedef typename detail::SchedulerVersionImpl<Options, typename Options::AccessInfoType> parent;
         typedef typename Options::version_t version_t;
     private:
         SpinLock lock;
@@ -67,8 +74,8 @@ namespace detail {
 
     template<typename Options>
     class SchedulerVersion<Options, typename Options::Disable>
-     : public detail::SchedulerVersionImpl<typename Options::version_t, typename Options::AccessInfoType> {
-        typedef typename detail::SchedulerVersionImpl<typename Options::version_t, typename Options::AccessInfoType> parent;
+     : public detail::SchedulerVersionImpl<Options, typename Options::AccessInfoType> {
+        typedef typename detail::SchedulerVersionImpl<Options, typename Options::AccessInfoType> parent;
         typedef typename Options::version_t version_t;
     public:
         version_t schedule(int type) { return parent::schedule(type); }
