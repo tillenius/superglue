@@ -269,6 +269,12 @@ public:
         SpinLockScoped lock(spinlock);
         TaskQueueUnsafe<Options>::swap(rhs);
     }
+
+    bool gotWorkSafe() { 
+        SpinLockScoped lock(spinlock);
+        return TaskQueueUnsafe<Options>::gotWork();
+    }
+
 };
 
 template<typename Options>

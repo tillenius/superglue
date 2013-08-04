@@ -2,7 +2,6 @@
 #define __WORKERTHREAD_HPP__
 
 #include "platform/threads.hpp"
-#include "platform/mutex.hpp"
 #include "core/barrierprotocol.hpp"
 
 template<typename Options> class TaskBase;
@@ -18,43 +17,38 @@ class WorkerThread
 protected:
     Thread *thread;
     bool terminateFlag;
-    BarrierProtocol<Options> &barrierProtocol;
 
     WorkerThread(const WorkerThread &);
     const WorkerThread &operator=(const WorkerThread &);
+
+    void waitForWork() {
+        Atomic::rep_nop();
+    }
 
     // Called from this thread only
     void mainLoop() {
 
         for (;;) {
+
             while (TaskExecutor<Options>::executeTasks());
 
-            if (barrierProtocol.waitAtBarrier(*this)) {
-                // waiting to leave old aborted barrier
-                for (;;) {
-                    if (barrierProtocol.leaveOldBarrier(*this)) {
-                        // successfully left old barrier
-                        break;
-                    }
-                    TaskExecutor<Options>::executeTasks();
-                }
-                continue;
-            }
-            else if (*static_cast<volatile bool *>(&terminateFlag)) {
+            TaskExecutor<Options>::tm.barrierProtocol.waitAtBarrier(*this);
+
+            if (*static_cast<volatile bool *>(&terminateFlag)) {
                 ThreadUtil::exit();
                 return;
             }
-            else {
-                // wait for work
-                barrierProtocol.waitForWork(); // must include memory barrier to reread 'terminateFlag'
-            }
+
+            waitForWork();
         }
     }
 
 public:
+    int my_barrier_state;
+
     // Called from this thread only
     WorkerThread(int id_, ThreadManager<Options> &tm_)
-      : TaskExecutor<Options>(id_, tm_), terminateFlag(false), barrierProtocol(tm_.barrierProtocol)
+      : TaskExecutor<Options>(id_, tm_), terminateFlag(false), my_barrier_state(0)
     {}
 
     ~WorkerThread() {}
@@ -68,12 +62,10 @@ public:
     // Called from other threads
     void setTerminateFlag() {
         terminateFlag = true;
-        // no memory fence here, must be followed by a global wake signal which will take care of the fence
     }
 
     void run(Thread *thread_) {
         this->thread = thread_;
-        Atomic::memory_fence_producer();
         srand(TaskExecutor<Options>::getId());
 
         ThreadManager<Options> &tm(TaskExecutor<Options>::getThreadManager());
