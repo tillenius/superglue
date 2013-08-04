@@ -9,12 +9,12 @@
 #include "platform/mutex.hpp"
 #include "platform/barrier.hpp"
 #include "core/barrierprotocol.hpp"
+#include "core/log.hpp"
 
 template <typename Options> class TaskBase;
 template <typename Options> class TaskQueue;
 template <typename Options> class WorkerThread;
 template <typename Options> class ThreadManager;
-template <typename Options> class Log;
 
 namespace detail {
 
@@ -128,6 +128,7 @@ public:
       : numWorkers(numWorkers_ == -1 ? decideNumWorkers() : numWorkers_),
         barrierProtocol(*this)
     {
+        Options::HardwareModel::init();
         ThreadUtil::setAffinity(Options::HardwareModel::cpumap(0));
         taskQueues = new TaskQueue<Options> *[getNumQueues()];
         taskQueues[0] = &barrierProtocol.getTaskQueue();
