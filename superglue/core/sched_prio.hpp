@@ -36,16 +36,6 @@ public:
         getTask(taskQueue, elem);
         return true;
     }
-
-    // initial placement of task
-    //   cpuid -- placement supplied by user (or 0)
-    // returns which thread should execute the task
-    static size_t place(TaskBase<Options> *task, int cpuid, size_t numThreads) {
-        if (cpuid == -1)
-            return 0;
-        return cpuid % numThreads;
-    }
-
 };
 
 #endif // __SCHED_PRIO_HPP__

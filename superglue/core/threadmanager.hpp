@@ -94,16 +94,11 @@ public:
     ThreadManager(const ThreadManager &);
     ThreadManager &operator=(const ThreadManager &);
 
-    void registerTaskQueues() const {
-       ThreadManager<Options> *this_((ThreadManager<Options> *)(this));
-       this_->taskQueues[getNumQueues()-1] = &this_->barrierProtocol.getTaskQueue();
-   }
-
     // called from thread starter. Can be called by many threads concurrently
     void registerThread(int id, WorkerThread<Options> *wt) {
-        threads[id] = wt;
+        threads[id-1] = wt;
         taskQueues[id] = &wt->getTaskQueue();
-        Log<Options>::registerThread(id+1);
+        Log<Options>::registerThread(id);
     }
 
     // ===========================================================================
@@ -112,12 +107,11 @@ public:
     template<typename Ops>
     class WorkerThreadStarter : public Thread {
     private:
-        int id;
+        const int id;
         ThreadManager &tm;
 
     public:
-        WorkerThreadStarter(int id_,
-                            ThreadManager &tm_)
+        WorkerThreadStarter(int id_, ThreadManager &tm_)
         : id(id_), tm(tm_) {}
 
         void run() {
@@ -128,40 +122,23 @@ public:
         }
     };
 
-    static bool dependenciesReadyAtSubmit(TaskBase<Options> *task, typename Options::EagerDependencyChecking) {
-        return task->areDependenciesSolvedOrNotify();
-    }
-
-    static bool dependenciesReadyAtSubmit(TaskBase<Options> *, typename Options::LazyDependencyChecking) {
-        return true;
-    }
-
-    // submits a task. One is required to invoke signalNewWork() after tasks have been submitted,
-    // but it is enough to do this once after submitting several tasks.
-    void submitNoSignal(TaskBase<Options> *task, int cpuid) {
-        if (!dependenciesReadyAtSubmit(task, typename Options::DependencyChecking()))
-            return;
-
-        const size_t queueIndex = Options::Scheduler::place(task, cpuid, getNumQueues());
-        taskQueues[queueIndex]->push_back(task);
-    }
 
 public:
     ThreadManager(int numWorkers_ = -1)
-      : numWorkers(numWorkers_ == -1 ? (ThreadUtil::getNumCPUs()-1) : numWorkers_),
+      : numWorkers(numWorkers_ == -1 ? decideNumWorkers() : numWorkers_),
         barrierProtocol(*this)
     {
-        ThreadUtil::setAffinity(Options::HardwareModel::cpumap(ThreadUtil::getNumCPUs()-1)); // force master thread to run on last cpu.
+        ThreadUtil::setAffinity(Options::HardwareModel::cpumap(0));
         taskQueues = new TaskQueue<Options> *[getNumQueues()];
-        registerTaskQueues();
+        taskQueues[0] = &barrierProtocol.getTaskQueue();
 
         threads = new WorkerThread<Options>*[numWorkers];
         startBarrier = new Barrier(numWorkers+1);
         Log<Options>::init(numWorkers+1);
         for (size_t i = 0; i < numWorkers; ++i) {
             WorkerThreadStarter<Options> *wts =
-                    new WorkerThreadStarter<Options>(i, *this);
-            wts->start(Options::HardwareModel::cpumap(i));
+                new WorkerThreadStarter<Options>(i+1, *this);
+            wts->start(Options::HardwareModel::cpumap(i+1));
         }
 
         // waiting on a pthread barrier here instead of using
@@ -181,8 +158,6 @@ public:
         for (size_t i = 0; i < numWorkers; ++i)
             threads[i]->setTerminateFlag();
 
-        barrierProtocol.signalNewWork();
-
         for (size_t i = 0; i < numWorkers; ++i)
             threads[i]->join();
 
@@ -195,15 +170,20 @@ public:
 
     size_t getNumWorkers() const { return numWorkers; }
     TaskQueue<Options> **getTaskQueues() const { return taskQueues; }
-    static size_t getNumQueues(const size_t numWorkers) { return numWorkers+1; }
-    size_t getNumQueues() const { return getNumQueues(numWorkers); }
+    size_t getNumQueues() const { return numWorkers+1; }
     WorkerThread<Options> *getWorker(size_t i) { return threads[i]; }
 
-    // INTERFACE TO HANDLE (SUBMITS TASKS OF THEIR OWN) {
+    static size_t decideNumWorkers() {
+        const char *var = getenv("OMP_NUM_THREADS");
+        if (var != NULL) {
+            const int intvar(atoi(var));
+            if (intvar != 0)
+                return atoi(var)-1;
+        }
+        return ThreadUtil::getNumCPUs()-1;
+    }
 
     void signalNewWork() { barrierProtocol.signalNewWork(); }
-
-    // }
 
     // called from worker threads during startup
     void waitToStartThread() {
@@ -214,19 +194,16 @@ public:
 
     // USER INTERFACE {
 
-    WorkerThread<Options> *getCurrentThread() const {
-        const ThreadManager<Options> *this_((const ThreadManager<Options> *)(this));
-        const ThreadIDType t(ThreadUtil::getCurrentThreadId());
-        for (size_t i = 0; i < this_->numWorkers; ++i)
-            if (this_->threads[i]->getThread()->getThreadId() == t)
-                return this_->threads[i];
-        std::cerr << "getCurrentThread() failed" << std::endl;
-        exit(1);
-        return 0;
+    void submit(TaskBase<Options> *task) {
+        barrierProtocol.submit(task);
+        barrierProtocol.signalNewWork();
     }
 
-    void submit(TaskBase<Options> *task, int cpuid = -1) {
-        submitNoSignal(task, cpuid);
+    void submit(TaskBase<Options> *task, int cpuid) {
+        if (cpuid == 0)
+            barrierProtocol.submit(task);
+        else
+            getWorker(cpuid-1)->submit(task);
         barrierProtocol.signalNewWork();
     }
 
@@ -241,7 +218,6 @@ public:
         }
     }
 
-    static size_t suggestnumWorkers() { return ThreadUtil::getNumCPUs()-1; }
     // }
 };
 

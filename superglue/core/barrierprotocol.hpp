@@ -50,7 +50,7 @@ private:
 
 public:
     BarrierProtocol(ThreadManager<Options> &tm_)
-      : TaskExecutor<Options>(tm_.getNumQueues()-1, tm_),
+      : TaskExecutor<Options>(0, tm_),
         barrierCounter(0), state(0)
     {
     }

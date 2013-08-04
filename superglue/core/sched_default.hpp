@@ -36,16 +36,6 @@ public:
         elem = taskQueue.front();
         taskQueue.pop_front();
     }
-
-    // initial placement of task
-    //   cpuid -- placement supplied by user (or -1)
-    // returns which thread should execute the task
-    static size_t place(TaskBase<Options> *task, int cpuid, size_t numThreads) {
-        if (cpuid == -1)
-            return numThreads-1;
-        return cpuid % numThreads;
-    }
 };
 
 #endif // __SCHED_DEFAULT_HPP__
-

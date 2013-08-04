@@ -248,6 +248,14 @@ public:
         return true;
     }
 
+    static bool dependenciesReadyAtSubmit(TaskBase<Options> *task, typename Options::EagerDependencyChecking) {
+        return task->areDependenciesSolvedOrNotify();
+    }
+
+    static bool dependenciesReadyAtSubmit(TaskBase<Options> *, typename Options::LazyDependencyChecking) {
+        return true;
+    }
+
 public:
 
     typename Options::UserThreadData userThreadData;
@@ -296,10 +304,17 @@ public:
         return false;
     }
 
+    void submit(TaskBase<Options> *task) {
+        if (!dependenciesReadyAtSubmit(task, typename Options::DependencyChecking()))
+            return;
+
+        readyList.push_back(task);
+        tm.signalNewWork();
+    }
+
     TaskQueue<Options> &getTaskQueue() { return readyList; }
     int getId() const { return id; }
     ThreadManager<Options> &getThreadManager() { return tm; }
 };
 
 #endif // __TASKEXECUTOR_HPP__
-
