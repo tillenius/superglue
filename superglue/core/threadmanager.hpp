@@ -30,7 +30,9 @@ struct ThreadManager_PauseExecution<Options, typename Options::Disable> {
 
 template<typename Options>
 struct ThreadManager_PauseExecution<Options, typename Options::Enable> {
+    char dummy[64];
     bool flag;
+    char dummy2[64];
     ThreadManager_PauseExecution() : flag(false) {}
     void setMayExecute(bool flag_) { flag = flag_; }
     bool mayExecute() const { return flag; }
@@ -87,6 +89,7 @@ private:
 
 public:
     BarrierProtocol<Options> barrierProtocol;
+    char padding[64];
     Barrier *startBarrier; // only used during thread creation
     WorkerThread<Options> **threads;
     TaskQueue<Options> **taskQueues;
@@ -190,7 +193,7 @@ public:
     void waitToStartThread() {
         startBarrier->wait();
         while (!detail::ThreadManager_PauseExecution<Options>::mayExecute())
-            Atomic::compiler_fence(); // to reload the mayExecute-flag
+            Atomic::rep_nop(); // include force reload the mayExecute-flag
     }
 
     // USER INTERFACE {
@@ -215,7 +218,7 @@ public:
     void wait(Handle<Options> *handle) {
         while (handle->nextVersion()-1 != handle->getCurrentVersion()) {
             barrierProtocol.executeTasks();
-            Atomic::compiler_fence(); // to reload the handle versions
+            Atomic::rep_nop(); // to reload the handle versions
         }
     }
 

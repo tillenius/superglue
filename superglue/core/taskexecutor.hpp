@@ -170,7 +170,9 @@ class TaskExecutor
 public:
     const int id;
     ThreadManager<Options> &tm;
+    char padding1[64];
     TaskQueue<Options> readyList;
+    char padding2[64];
 
     // Called from this thread only
     TaskBase<Options> *getTaskInternal() {
