@@ -1,4 +1,5 @@
-INCDIR=../../superglue/
+
+FLAGS=-O3 -Wall -Wno-long-long -I ../../superglue -pthread
 
 MKL_ROOT=/opt/intel/mkl
 
@@ -10,10 +11,11 @@ MKL_LIBS= \
   $(MKL_ROOT)/lib/intel64/libmkl_intel_lp64.a \
   $(MKL_ROOT)/lib/intel64/libmkl_sequential.a \
   $(MKL_ROOT)/lib/intel64/libmkl_core.a \
+  -ldl \
   -Wl,--end-group
 
 cholesky: cholesky.cpp Makefile
-	$(CXX) -O3 -Wall -I$(INCDIR) $(MKL_INC) cholesky.cpp -o $@ $(MKL_LIBS) -pthread -lm
+	$(CXX) $(FLAGS) $(MKL_INC) cholesky.cpp -o $@ $(MKL_LIBS) -lm
 
 else
 

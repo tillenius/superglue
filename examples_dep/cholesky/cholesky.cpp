@@ -35,7 +35,8 @@
 //
 
 #include "superglue.hpp"
-#include "core/instr_tasktiming.hpp"
+#include "hardwaremodel.hpp"
+#include "option/instr_tasktiming.hpp"
 #include <math.h>
 #include <mkl.h>
 #include <iostream>
@@ -60,6 +61,7 @@ struct MyHandle : public HandleDefault<Options> {
 //   * Enable logging (generate execution trace)
 // ==========================================================================
 struct Options : public DefaultOptions<Options> {
+    typedef LocalHardwareModel HardwareModel;
     typedef MyHandle<Options> HandleType;
     typedef Enable Logging;
     typedef TaskExecutorTiming<Options> TaskExecutorInstrumentation;
@@ -147,24 +149,24 @@ static void cholesky(const int num_threads, const size_t numBlocks) {
         for (size_t k = 0; k < j; k++) {
             for (size_t i = j+1; i < numBlocks; i++) {
                 // A[i,j] = A[i,j] - A[i,k] * (A[j,k])^t
-                tm.submit(new gemm(A[i][k], A[j][k], A[i][j]), i);
+                tm.submit(new gemm(A[i][k], A[j][k], A[i][j]));
             }
         }
         for (size_t i = 0; i < j; i++) {
             // A[j,j] = A[j,j] - A[j,i] * (A[j,i])^t
-            tm.submit(new syrk(A[j][i], A[j][j]), j);
+            tm.submit(new syrk(A[j][i], A[j][j]));
         }
 
         // Cholesky Factorization of A[j,j]
-        tm.submit(new potrf(A[j][j]), j);
+        tm.submit(new potrf(A[j][j]));
 
         for (size_t i = j+1; i < numBlocks; i++) {
             // A[i,j] <- A[i,j] = X * (A[j,j])^t
-            tm.submit(new trsm(A[j][j], A[i][j]), j);
+            tm.submit(new trsm(A[j][j], A[i][j]));
         }
     }
 
-    tm.barrier();
+    tm.wait(&A[numBlocks-1][numBlocks-1]);
 
     Time::TimeUnit t2 = Time::getTime();
     std::cout << "#cores=" << tm.getNumQueues()
@@ -200,9 +202,9 @@ int main(int argc, char *argv[]) {
     }
     N = NB*DIM;
 
-    int num_cores = -1;
+    int num_workers = -1;
     if (argc >= 4)
-        num_cores = atoi(argv[3])-1;
+        num_workers = atoi(argv[3])-1;
 
     // fill the matrix with random values
     double *Alin = (double *) malloc(N*N * sizeof(double));
@@ -212,6 +214,24 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < N; i++)
         Alin[i*N + i] += N;
 
+#ifdef NOT_DEFINED
+    double *a(Alin);
+    int info = 0;
+    int nb = N;
+
+    Time::TimeUnit t1, t2;
+
+    mkl_set_num_threads(num_cores);
+{
+    mkl_set_dynamic(0);
+    t1 = Time::getTime();
+    dpotrf("L", &nb, a, &nb, &info);
+    t2 = Time::getTime();
+}
+    std::cout << NB << " " << DIM << " " << num_cores << " " << t2-t1 << std::endl;
+    return 0;
+#endif
+
     // blocked matrix
     Adata = (double **) malloc(DIM*DIM*sizeof(double *));   // A: DIM x DIM
     for (size_t i = 0; i < DIM*DIM; i++)
@@ -219,7 +239,11 @@ int main(int argc, char *argv[]) {
 
     convert_to_blocks(Alin, Adata);
 
-    cholesky(num_cores, DIM);
+    std::cerr<<"run " << num_workers+1 << " NB=" << NB << " DIM=" << DIM <<  std::endl;
+
+    mkl_set_num_threads(1);
+
+    cholesky(num_workers, DIM);
 
     Log<Options>::dump("execution.log");
     return 0;
