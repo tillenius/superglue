@@ -92,9 +92,12 @@ public:
                 const size_t num_workers = TaskExecutor<Options>::getThreadManager().getNumWorkers();
                 if (num_workers == 1) {
                     // if there is a single worker we can't wait for anybody else to finish the barrier.
-                    wwt.my_barrier_state = 2;
+                    if (!wwt.getTaskQueue().empty_safe()) {
+                        abort = 1;
+                        Atomic::memory_fence_producer();
+                    }
+                    wwt.my_barrier_state = 0;
                     state = 0;
-                    //Atomic::memory_fence_producer();
                     return;
                 }
 
