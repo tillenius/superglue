@@ -111,11 +111,12 @@ class Access
 {
 public:
     typedef typename Options::AccessInfoType AccessInfo;
+    typedef typename Options::version_t version_t;
 
     // The handle to the object
     Handle<Options> *handle;
     // Required version
-    typename Options::version_t requiredVersion;
+    version_t requiredVersion;
 
     // Constructors
     Access() {}
