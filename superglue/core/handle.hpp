@@ -8,7 +8,7 @@
 #include "platform/atomic.hpp"
 #include <cassert>
 
-template<typename Options> class Handle;
+template<typename Options> class HandleBase;
 template<typename Options> class TaskBase;
 template<typename Options> class TaskExecutor;
 template<typename Options> class SchedulerVersion;
@@ -196,7 +196,7 @@ public:
     }
 
     size_t increaseCurrentVersion(TaskExecutor<Options> &taskExecutor) {
-        Handle<Options> *this_(static_cast<Handle<Options> *>(this));
+        HandleBase<Options> *this_(static_cast<HandleBase<Options> *>(this));
 
         // first check if we owned the lock before version is increased
         // (otherwise someone else might grab the lock in between)
@@ -222,7 +222,7 @@ public:
 // Handle
 // ============================================================================
 template<typename Options>
-class HandleDefault
+class HandleBase
   : public detail::Handle_Lockable<Options>,
     public detail::Handle_Contributions<Options>,
     public detail::Handle_GlobalId<Options>,
@@ -235,8 +235,8 @@ class HandleDefault
 
 private:
     // Not copyable -- there must be only one data handle per data.
-    HandleDefault(const HandleDefault &);
-    const HandleDefault &operator=(const HandleDefault &);
+    HandleBase(const HandleBase &);
+    const HandleBase &operator=(const HandleBase &);
 
 public:
 
@@ -251,8 +251,8 @@ public:
         return Atomic::increase_nv(&version);
     }
 
-    HandleDefault() : version(0) {}
-    ~HandleDefault() {
+    HandleBase() : version(0) {}
+    ~HandleBase() {
         if (version != requiredVersion.nextVersion()-1)
             std::cerr<<"ver=" << version << " req=" << requiredVersion.nextVersion()-1 << std::endl;
         assert(version == requiredVersion.nextVersion()-1);
@@ -282,6 +282,7 @@ public:
     }
 };
 
+// export Options::HandleType as Handle (default: HandleBase<Options>)
 template<typename Options> class Handle : public Options::HandleType {};
 
 #endif // __HANDLE_HPP__

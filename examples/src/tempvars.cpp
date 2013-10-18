@@ -2,7 +2,7 @@
 #include <iostream>
 
 template<typename Options>
-struct MyHandle : public HandleDefault<Options> {
+struct MyHandle : public HandleBase<Options> {
     int data;
 };
 

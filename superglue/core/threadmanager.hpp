@@ -220,7 +220,7 @@ public:
         barrierProtocol.barrier();
     }
 
-    void wait(Handle<Options> *handle) {
+    void wait(HandleBase<Options> *handle) {
         while (handle->nextVersion()-1 != handle->getCurrentVersion()) {
             barrierProtocol.executeTasks();
             Atomic::rep_nop(); // to reload the handle versions

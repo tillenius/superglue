@@ -9,7 +9,7 @@ double data[numSlices][sliceSize];
 
 // Define own handle type to store user-specific data in all handles.
 template<typename Options>
-struct MyHandle : public HandleDefault<Options> {
+struct MyHandle : public HandleBase<Options> {
     size_t index;
 	void setIndex(size_t i) { index = i; }
 };

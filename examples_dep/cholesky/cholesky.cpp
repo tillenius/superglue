@@ -46,7 +46,7 @@ size_t N, NB, DIM;
 
 // Expand handle to include two indexes
 template<typename Options>
-struct MyHandle : public HandleDefault<Options> {
+struct MyHandle : public HandleBase<Options> {
     size_t i, j;
     void set(size_t i_, size_t j_) { i = i_; j = j_; }
     size_t geti() { return i; }

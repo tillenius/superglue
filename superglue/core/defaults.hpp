@@ -22,7 +22,7 @@ struct DefaultOptions {
     typedef DefaultHardwareModel HardwareModel;
 
     // Types that can be overloaded
-    typedef HandleDefault<Options> HandleType;
+    typedef HandleBase<Options> HandleType;
     typedef TaskBaseDefault<Options> TaskBaseType;
     template<int N> struct TaskType {
         typedef TaskDefault<Options, N> type;

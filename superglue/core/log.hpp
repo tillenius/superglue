@@ -18,7 +18,7 @@
 
 template<typename Options> class Log;
 template<typename Options> class TaskBase;
-template<typename Options> class Handle;
+template<typename Options> class HandleBase;
 
 namespace detail {
 
@@ -42,12 +42,12 @@ private:
     }
 
     template<typename O>
-    static std::string getName(Handle<O> *handle, typename O::Enable) {
+    static std::string getName(HandleBase<O> *handle, typename O::Enable) {
         return handle->getName();
     }
 
     template<typename O>
-    static std::string getName(Handle<O> *handle, typename O::Disable) {
+    static std::string getName(HandleBase<O> *handle, typename O::Disable) {
         char name[30];
         sprintf(name, "%p", (void *) handle);
         return name;
@@ -59,7 +59,7 @@ public:
     static std::string getName(TaskBase<O> *task) { return getName(task, typename O::TaskName()); }
 
     template<typename O>
-    static std::string getName(Handle<O> *handle) { return getName(handle, typename O::HandleName()); }
+    static std::string getName(HandleBase<O> *handle) { return getName(handle, typename O::HandleName()); }
 
 };
 
@@ -69,7 +69,7 @@ std::ostream& operator<<(std::ostream& os, TaskBase<Options> *task) {
     return os;
 }
 template<typename Options>
-std::ostream& operator<<(std::ostream& os, Handle<Options> *handle) {
+std::ostream& operator<<(std::ostream& os, HandleBase<Options> *handle) {
     os << GetName::getName(handle);
     return os;
 }
