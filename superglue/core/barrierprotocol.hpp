@@ -191,8 +191,8 @@ public:
         const int local_abort(*static_cast<volatile int *>(&abort));
         if (local_abort != 1) {
             abort = 1;
-			Atomic::memory_fence_producer();
-		}
+            Atomic::memory_fence_producer();
+        }
     }
 };
 

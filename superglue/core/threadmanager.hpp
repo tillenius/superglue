@@ -185,7 +185,7 @@ public:
         const char *var = getenv("OMP_NUM_THREADS");
         if (var != NULL) {
             const int OMP_NUM_THREADS(atoi(var));
-			assert(OMP_NUM_THREADS >= 0);
+            assert(OMP_NUM_THREADS >= 0);
             if (OMP_NUM_THREADS != 0)
                 return OMP_NUM_THREADS-1;
         }

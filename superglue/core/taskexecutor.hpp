@@ -277,7 +277,7 @@ public:
         const size_t numAccess = task->getNumAccess();
         Access<Options> *access(task->getAccess());
         for (size_t i = numAccess; i > 0; --i) {
-      	    size_t ver;
+            size_t ver;
             if (access[i-1].useContrib())
                 ver = access[i-1].getHandle()->increaseCurrentVersionNoUnlock(*this_);
             else

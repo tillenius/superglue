@@ -134,7 +134,7 @@ void setup() {
     size_t row = 0;
     double rowheight = 1.0;
     double barheight = 0.8;
-	
+    
     procthr2coord.resize(tasksperproc.size());
     for (size_t proc = 0; proc < tasksperproc.size(); ++proc) {
         procthr2coord[proc].resize(tasksperproc[proc].size());
@@ -563,8 +563,8 @@ bool parse(const char *filename) {
             e.name = name.substr(1, string::npos);
         }
 
-	    if (startsWith(e.name, "tl_barrier"))
-			continue;
+        if (startsWith(e.name, "tl_barrier"))
+            continue;
 
 
         alltasks.push_back(e);

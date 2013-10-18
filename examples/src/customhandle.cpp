@@ -11,7 +11,7 @@ double data[numSlices][sliceSize];
 template<typename Options>
 struct MyHandle : public HandleBase<Options> {
     size_t index;
-	void setIndex(size_t i) { index = i; }
+    void setIndex(size_t i) { index = i; }
 };
 
 // Specify that our handle type should replace the default handle type.
@@ -59,8 +59,8 @@ int main() {
     Handle<Options> h[numSlices];
 
     // Set the user-defined index
-	for (size_t i = 0; i < numSlices; ++i)
-		h[i].setIndex(i);
+    for (size_t i = 0; i < numSlices; ++i)
+        h[i].setIndex(i);
 
     ThreadManager<Options> tm;
     tm.submit(new ScaleTask(2.0, h[0], h[1])); // h_1 = 2*h_0
