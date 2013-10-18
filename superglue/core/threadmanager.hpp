@@ -121,6 +121,9 @@ public:
         : id(id_), tm(tm_) {}
 
         void run() {
+            // pin thread to specific cpu core
+            Options::ThreadAffinity::set(id);
+
             // allocate Worker on thread
             WorkerThread<Ops> *wt = new WorkerThread<Ops>(id, tm);
             tm.registerThread(id, wt);
@@ -138,7 +141,7 @@ public:
         assert(numWorkers_ == -1 || numWorkers_ >= 0);
 
         Options::HardwareModel::init();
-        ThreadUtil::setAffinity(Options::HardwareModel::cpumap(0));
+        Options::ThreadAffinity::set(0);
         taskQueues = new TaskQueue<Options> *[getNumQueues()];
         taskQueues[0] = &barrierProtocol.getTaskQueue();
 
@@ -148,7 +151,7 @@ public:
         for (size_t i = 0; i < numWorkers; ++i) {
             WorkerThreadStarter<Options> *wts =
                 new WorkerThreadStarter<Options>(i+1, *this_);
-            wts->start(Options::HardwareModel::cpumap(i+1));
+            wts->start();
         }
 
         // waiting on a pthread barrier here instead of using

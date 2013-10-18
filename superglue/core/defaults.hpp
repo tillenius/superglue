@@ -86,6 +86,13 @@ struct DefaultOptions {
     };
     typedef FreeTaskDefault FreeTask;
 
+    // Thread affinity
+    struct DefaultThreadAffinity {
+        static void set(int id) {
+            ThreadUtil::setAffinity(Options::HardwareModel::cpumap(id));
+        }
+    };
+    typedef DefaultThreadAffinity ThreadAffinity;
 };
 
 #endif // __DEFAULTS_HPP__

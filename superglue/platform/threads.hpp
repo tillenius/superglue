@@ -140,143 +140,71 @@ public:
     }
 };
 
-#ifndef _WIN32
-extern "C" void *spawnFreeThread(void *arg);
-extern "C" void *spawnThread(void *arg);
-#else
-DWORD WINAPI spawnFreeThread(LPVOID arg);
-DWORD WINAPI spawnThread(LPVOID arg);
-#endif
+namespace detail {
 
 // ===========================================================================
-// FreeThread: Thread that is not locked to a certain core
+// Native part of the Thread class
 // ===========================================================================
 #ifdef _WIN32
-class FreeThread {
+template<typename Thread>
+class ThreadNative {
 private:
-    FreeThread(const FreeThread &);
-    const FreeThread &operator=(const FreeThread &);
-
-    static DWORD WINAPI spawnFreeThread(LPVOID arg) {
-        ((FreeThread *) arg)->run();
-        ThreadUtil::exit();
-        return 0;
-    }
-
-protected:
-    ThreadType thread;
-
-public:
-    FreeThread() {}
-
-    virtual void run() = 0;
-
-    void start() {
-        DWORD threadID;
-        thread = CreateThread(NULL, 0, &FreeThread::spawnFreeThread, (void *) this, 0, &threadID);
-    }
-    void join() { detail::ThreadImpl::join(thread); }
-};
-#else
-class FreeThread {
-private:
-    FreeThread(const FreeThread &);
-    const FreeThread &operator=(const FreeThread &);
-
-    static void *spawnFreeThread(void *arg) {
-        ((FreeThread *) arg)->run();
-        ThreadUtil::exit();
-        return 0;
-    }
-
-protected:
-    ThreadType thread;
-
-public:
-    FreeThread() {}
-
-    virtual void run() = 0;
-
-    void start() {
-        pthread_attr_t attr;
-        pthread_attr_init(&attr);
-        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-        if (pthread_create(&thread, &attr, &FreeThread::spawnFreeThread, (void *) this) != 0) {
-            std::cerr << "pthread_create failed" << std::endl;
-            ::exit(1);
-        }
-        pthread_attr_destroy(&attr);
-    }
-    void join() { detail::ThreadImpl::join(thread); }
-};
-#endif
-
-
-// ===========================================================================
-// Thread: Thread locked to core #hwcpuid
-// ===========================================================================
-
-#ifdef _WIN32
-class Thread : public FreeThread {
-private:
-    ThreadIDType threadID;
-
-    DWORD WINAPI spawnThread(LPVOID arg) {
+    static DWORD WINAPI spawnThread(LPVOID arg) {
         ((Thread *) arg)->run();
         ThreadUtil::exit();
         return 0;
     }
-
 public:
-    Thread() {}
-
-    // hwcpuid is the os-specific cpu identifier
-    void start(size_t hwcpuid) {
-        thread = CreateThread(NULL, 0, &Thread::spawnThread, (void *) this, 0, &threadID);
-        SetThreadAffinityMask(thread, 1<<hwcpuid);
-    }
-
-    // [DEBUG] returns operating system thread identifier
-    ThreadIDType getThreadId() {
-        return threadID;
+    void start() {
+        DWORD threadID;
+        this->thread = CreateThread(NULL, 0, &ThreadNative::spawnThread, (void *) this, 0, &threadID);
     }
 };
 #else
-class Thread : public FreeThread {
+template<typename Thread>
+class ThreadNative {
 private:
     static void *spawnThread(void *arg) {
-        Thread *thisThread = (Thread *) arg;
-        ThreadUtil::setAffinity(thisThread->cpuid);
-        thisThread->run();
+        ((Thread *) arg)->run();
         ThreadUtil::exit();
         return 0;
     }
-
 public:
-    int cpuid;
-
-    Thread() {}
-
-    void start(size_t hwcpuid) {
+    void start() {
         pthread_attr_t attr;
         pthread_attr_init(&attr);
         pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-
-        cpuid = hwcpuid;
-
-        if (pthread_create(&thread, &attr, &Thread::spawnThread, (void *) this) != 0) {
+        if (pthread_create(&((Thread *)this)->thread, &attr, &ThreadNative::spawnThread, (void *) this) != 0) {
             std::cerr << "pthread_create failed" << std::endl;
             ::exit(1);
         }
         pthread_attr_destroy(&attr);
     }
-
-    // [DEBUG] returns operating system thread identifier
-    ThreadIDType getThreadId() {
-        return thread;
-    }
 };
 #endif
+
+} // namespace details
+
+// ===========================================================================
+// Thread
+// ===========================================================================
+class Thread : public detail::ThreadNative<Thread> {
+private:
+    template<typename> friend class detail::ThreadNative;
+
+    Thread(const Thread &);
+    const Thread &operator=(const Thread &);
+
+protected:
+    ThreadType thread;
+
+public:
+    Thread() {}
+
+    virtual void run() = 0;
+
+    void join() { detail::ThreadImpl::join(thread); }
+};
 
 #endif // __THREADS_HPP__
 
