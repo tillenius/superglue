@@ -65,7 +65,7 @@ static void LOG_dump(const char *filename) {
           minimum = LOG_data[i].start;
   }
   for (size_t i = 0; i < LOG_ptr; ++i) {
-      fprintf(out, "%lu: %lld %lld %s\n",
+      fprintf(out, "%lu: %llu %llu %s\n",
               LOG_data[i].thread,
               LOG_data[i].start-minimum,
               LOG_data[i].length,
