@@ -75,10 +75,10 @@ struct CheckLockableRequired<Options, typename Options::Disable> {
 } // namespace detail
 
 // ===========================================================================
-// ThreadManager
+// ThreadManagerBase
 // ===========================================================================
 template<typename Options>
-class ThreadManager
+class ThreadManagerBase
   : public detail::ThreadManager_PauseExecution<Options>
 {
     template<typename> friend struct ThreadManager_GetCurrentThread;
@@ -89,6 +89,9 @@ class ThreadManager
 private:
     const size_t numWorkers;
 
+    ThreadManagerBase(const ThreadManagerBase &);
+    ThreadManagerBase &operator=(const ThreadManagerBase &);
+
 public:
     BarrierProtocol<Options> barrierProtocol;
     char padding[64];
@@ -96,8 +99,6 @@ public:
     WorkerThread<Options> **threads;
     TaskQueue<Options> **taskQueues;
 
-    ThreadManager(const ThreadManager &);
-    ThreadManager &operator=(const ThreadManager &);
 
     // called from thread starter. Can be called by many threads concurrently
     void registerThread(int id, WorkerThread<Options> *wt) {
@@ -113,10 +114,10 @@ public:
     class WorkerThreadStarter : public Thread {
     private:
         const int id;
-        ThreadManager &tm;
+        ThreadManager<Ops> &tm;
 
     public:
-        WorkerThreadStarter(int id_, ThreadManager &tm_)
+        WorkerThreadStarter(int id_, ThreadManager<Ops> &tm_)
         : id(id_), tm(tm_) {}
 
         void run() {
@@ -129,10 +130,11 @@ public:
 
 
 public:
-    ThreadManager(int numWorkers_ = -1)
+    ThreadManagerBase(int numWorkers_ = -1)
       : numWorkers(numWorkers_ == -1 ? decideNumWorkers() : numWorkers_),
-        barrierProtocol(*this)
+        barrierProtocol(*static_cast<ThreadManager<Options> *>(this))
     {
+        ThreadManager<Options> *this_(static_cast<ThreadManager<Options> *>(this));
         assert(numWorkers_ == -1 || numWorkers_ >= 0);
 
         Options::HardwareModel::init();
@@ -145,7 +147,7 @@ public:
         Log<Options>::init(numWorkers+1);
         for (size_t i = 0; i < numWorkers; ++i) {
             WorkerThreadStarter<Options> *wts =
-                new WorkerThreadStarter<Options>(i+1, *this);
+                new WorkerThreadStarter<Options>(i+1, *this_);
             wts->start(Options::HardwareModel::cpumap(i+1));
         }
 
@@ -159,7 +161,7 @@ public:
         // that everyone has reached the barrier to destroy it
     }
 
-    ~ThreadManager() {
+    ~ThreadManagerBase() {
         assert(detail::ThreadManager_PauseExecution<Options>::mayExecute());
         barrier();
 
@@ -228,6 +230,12 @@ public:
     }
 
     // }
+};
+
+// export Options::ThreadManagerType as ThreadManager (default: ThreadManagerBase<Options>)
+template<typename Options> class ThreadManager : public Options::ThreadManagerType {
+public:
+    ThreadManager(int num_workers = -1) : Options::ThreadManagerType(num_workers) {}
 };
 
 #endif // __THREADMANAGER_HPP__

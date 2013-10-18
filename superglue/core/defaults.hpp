@@ -6,6 +6,9 @@
 #include "core/hwmodel_default.hpp"
 #include "core/stealorder.hpp"
 
+template<typename Options> class TaskExecutorBase;
+template<typename Options> class ThreadManagerBase;
+
 template <typename Options>
 struct DefaultOptions {
 
@@ -27,6 +30,8 @@ struct DefaultOptions {
     template<int N> struct TaskType {
         typedef TaskDefault<Options, N> type;
     };
+    typedef TaskExecutorBase<Options> TaskExecutorType;
+    typedef ThreadManagerBase<Options> ThreadManagerType;
 
     // Features
     typedef Disable TaskName;            // tasks must implement a getName() method

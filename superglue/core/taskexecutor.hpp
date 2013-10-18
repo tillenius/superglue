@@ -178,10 +178,10 @@ public:
 } // namespace detail
 
 // ============================================================================
-// TaskExecutor
+// TaskExecutorBase
 // ============================================================================
 template<typename Options>
-class TaskExecutor
+class TaskExecutorBase
   : public detail::TaskExecutor_CurrentTask<Options>,
     public detail::TaskExecutor_GetThreadWorkspace<Options>,
     public detail::TaskExecutor_PassTaskExecutor<Options>,
@@ -249,12 +249,14 @@ public:
     }
 
     bool tryLock(TaskBase<Options> *task) {
+        TaskExecutor<Options> *this_(static_cast<TaskExecutor<Options> *>(this));
+
         const size_t numAccess = task->getNumAccess();
         Access<Options> *access(task->getAccess());
         for (size_t i = 0; i < numAccess; ++i) {
             if (!access[i].getLockOrNotify(task)) {
                 for (size_t j = 0; j < i; ++j)
-                    access[i-j-1].releaseLock(*this);
+                    access[i-j-1].releaseLock(*this_);
                 return false;
             }
         }
@@ -289,14 +291,15 @@ public:
 
     typename Options::UserThreadData userThreadData;
 
-    TaskExecutor(int id_, ThreadManager<Options> &tm_)
+    TaskExecutorBase(int id_, ThreadManager<Options> &tm_)
       : id(id_), tm(tm_)
     {
-        Options::TaskExecutorInstrumentation::init(*this);
-        this->init_stealing(this);
+        TaskExecutor<Options> *this_(static_cast<TaskExecutor<Options> *>(this));
+        Options::TaskExecutorInstrumentation::init(*this_);
+        this_->init_stealing(this_);
     }
 
-    ~TaskExecutor() {
+    ~TaskExecutorBase() {
         Options::TaskExecutorInstrumentation::destroy();
     }
 
@@ -344,6 +347,13 @@ public:
     TaskQueue<Options> &getTaskQueue() { return readyList; }
     int getId() const { return id; }
     ThreadManager<Options> &getThreadManager() { return tm; }
+};
+
+// export Options::TaskExecutorType as TaskExecutor (default: TaskExecutorBase<Options>)
+template<typename Options> class TaskExecutor : public Options::TaskExecutorType {
+public:
+    TaskExecutor(int id, ThreadManager<Options> &tm)
+    : Options::TaskExecutorType(id, tm) {}
 };
 
 #endif // __TASKEXECUTOR_HPP__
