@@ -563,10 +563,6 @@ bool parse(const char *filename) {
             e.name = name.substr(1, string::npos);
         }
 
-        if (startsWith(e.name, "tl_barrier"))
-            continue;
-
-
         alltasks.push_back(e);
     }
     infile.close();
