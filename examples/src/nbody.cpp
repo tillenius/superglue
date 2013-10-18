@@ -304,7 +304,7 @@ void evalForce(ThreadManager<Options> &tm,
     for (size_t i = 0; i < numBlocks; ++i) {
         tm.submit(new EvalWithinTask(&particles[i*blockSize], &part[i],
                                      &forces[i*blockSize], &forc[i],
-                                     blockSize), i);
+                                     blockSize));
     }
     for (size_t i = 0; i < numBlocks; ++i) {
         for (size_t j = i + 1; j < numBlocks; ++j)
@@ -312,7 +312,7 @@ void evalForce(ThreadManager<Options> &tm,
                                           &particles[j*blockSize], &part[j],
                                           &forces[i*blockSize], &forc[i],
                                           &forces[j*blockSize], &forc[j],
-                                          blockSize), i);
+                                          blockSize));
     }
 }
 
@@ -328,7 +328,7 @@ void step(ThreadManager<Options> &tm,
     for (i = 0; i < numBlocks; ++i) {
         tm.submit(new TimeStepTask(&particles[i*blockSize], &part[i],
                                    &forces[i*blockSize], &forc[i],
-                                   blockSize), i);
+                                   blockSize));
     }
 }
 
