@@ -210,51 +210,60 @@ template<typename Options> class TaskBase
 {};
 
 // ============================================================================
-// TaskDefault : Tasks with fixed number of dependencies
+// TaskDefault : adds registerAccess()
 // ============================================================================
 template<typename Options, int N = -1>
 class TaskDefault : public TaskBase<Options> {
     Access<Options> access[N];
     typedef typename Options::AccessInfoType AccessInfo;
     typedef typename AccessInfo::Type AccessType;
+    typedef typename Options::version_t version_t;
 public:
     TaskDefault() {
         // If this assignment is done through a constructor, we can save the initial assignment,
         // but then any user-overloaded TaskBaseDefault() class must forward both constructors.
         TaskBase<Options>::accessPtr = &access[0];
     }
-    void registerAccess(AccessType type, Handle<Options> *handle) {
-        Access<Options> &a(access[TaskBase<Options>::numAccess++]);
-        a = Access<Options>(handle, handle->schedule(type));
+    void addAccess(AccessType type, Handle<Options> *handle, version_t version) {
+        Access<Options> &a(access[TaskBase<Options>::numAccess]);
+        a.handle = handle;
+        a.requiredVersion = version;
         if (AccessUtil<Options>::needsLock(type))
-             a.setNeedsLock(true);
+            a.setNeedsLock(true);
         Log_DAG<Options>::dag_addDependency(static_cast<TaskBase<Options> *>(this), &a, type);
+        ++TaskBase<Options>::numAccess;
+    }
+    void registerAccess(AccessType type, Handle<Options> *handle) {
+        addAccess(type, handle, handle->schedule(type));
     }
 };
 
-// Special case for zero dependencies
+// Specialization for zero dependencies
 template<typename Options>
 class TaskDefault<Options, 0> : public TaskBase<Options> {};
 
-// ============================================================================
-// TaskDefault : Dynamic number of dependencies (default)
-// ============================================================================
+// Specialization for variable number of dependencies
 template<typename Options>
 class TaskDefault<Options, -1> : public TaskBase<Options> {
     typedef typename Options::AccessInfoType AccessInfo;
     typedef typename AccessInfo::Type AccessType;
     typedef typename Types<Options>::template vector_t< Access<Options> >::type access_vector_t;
+    typedef typename Options::version_t version_t;
 protected:
     access_vector_t access;
 public:
-    void registerAccess(AccessType type, Handle<Options> *handle) {
-        access.push_back(Access<Options>(handle, handle->schedule(type)));
+    void addAccess(AccessType type, Handle<Options> *handle, version_t version) {
+        access.push_back(Access<Options>(handle, version));
         Access<Options> &a(access[access.size()-1]);
         if (AccessUtil<Options>::needsLock(type))
-             a.setNeedsLock(true);
+            a.setNeedsLock(true);
         Log_DAG<Options>::dag_addDependency(static_cast<TaskBase<Options> *>(this), &a, type);
         ++TaskBase<Options>::numAccess;
         TaskBase<Options>::accessPtr = &access[0]; // vector may be reallocated at any add
+    }
+
+    void registerAccess(AccessType type, Handle<Options> *handle) {
+        addAccess(type, handle, handle->schedule(type));
     }
 };
 

@@ -98,24 +98,12 @@ struct trsm : public Task<Options> {
 struct propagate : public Task<Options> {
     size_t index, i, j;
 
-    // this should be added to SuperGlue
-    void registerPropagate(Handle<Options> *handle) {
-        // register an access to a handle, requiring version 0 of it
-        // (which is the first version, and hence always available)
-        // the handle version will be automatically increased when the
-        // task is finished.
-        access.push_back(Access<Options>(handle, 0));
-        Log_DAG<Options>::dag_addDependency(this, &access[access.size()-1], ReadWriteAdd::write);
-        ++TaskBase<Options>::numAccess;
-        TaskBase<Options>::accessPtr = &access[0];
-    }
-
     propagate(size_t addedby_, Handle<Options> *src, Handle<Options> *dst, size_t index_,
               size_t i_, size_t j_)
     : index(index_), i(i_), j(j_) {
         addedby = addedby_;
         registerAccess(ReadWriteAdd::read, src);
-        registerPropagate(dst);
+        addAccess(ReadWriteAdd::write, dst, 0);
     }
     void run() {}
     std::string getName() {
