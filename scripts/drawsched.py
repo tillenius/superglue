@@ -142,18 +142,16 @@ def drawPlot(tasks):
     barHeight = height * 0.8
 
     for task in tasks:
-        x0 = task['start'];
-        x1 = x0 + task['length'];
-        y0 = task['threadid'] * height
-        y1 = y0 + barHeight;
+        x0 = task['start']
+        x1 = x0 + task['length']
+        y0 = task['threadid'] * height - barHeight / 2.0
+        y1 = y0 + barHeight
         drawTask(x0, x1, y0, y1, task['name'])
 
-    pylab.ylim([0, numThreads]);
-
+    padding = barHeight/2
+    pylab.ylim([ -barHeight/2 - padding, (numThreads-1)*height + barHeight/2 + padding]);
     yticks=range(0, numThreads)
-    pylab.yticks([x + barHeight/2 for x in yticks], yticks);
-#    pylab.xticks(fontsize=tickfontsize)
-#    pylab.yticks(fontsize=tickfontsize)
+    pylab.yticks(yticks, yticks);
     pylab.xlabel(r'Time')#,fontsize=labelfontsize)
     pylab.ylabel(r'Thread')#,fontsize=labelfontsize)
 
