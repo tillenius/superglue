@@ -151,7 +151,7 @@ private:
 
         TaskQueueUnsafe<Options> wake;
         lockListenerList.swap(wake);
-        if (!wake.gotWork())
+        if (wake.empty())
             return;
 
         taskExecutor.getTaskQueue().push_front_list(wake);

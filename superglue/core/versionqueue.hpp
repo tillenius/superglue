@@ -17,7 +17,7 @@ private:
     versionmap_t versionListeners;
 
     struct DependenciesNotSolvedPredicate {
-        static bool test(TaskBase<Options> *elem) {
+        bool operator()(TaskBase<Options> *elem) {
             return !elem->areDependenciesSolvedOrNotify();
         }
     };
@@ -61,7 +61,7 @@ public:
 
             checkDependencies(list, typename Options::DependencyChecking());
 
-            if (list.gotWork()) {
+            if (!list.empty()) {
                 taskExecutor.getTaskQueue().push_front_list(list);
                 taskExecutor.getThreadManager().signalNewWork();
             }

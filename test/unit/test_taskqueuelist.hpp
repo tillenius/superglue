@@ -15,7 +15,7 @@ class TestTaskQueueList : public TestCase {
     };
 
     struct IsBPred {
-        static bool test(TaskBase<OpDefault> *task) {
+        bool operator()(TaskBase<OpDefault> *task) {
             return ((Task *) task)->name == "B";
         }
     };
@@ -23,9 +23,9 @@ class TestTaskQueueList : public TestCase {
     static bool testTaskQueue(std::string &name) { name = "testTaskQueue";
         TaskQueue<OpDefault> q;
 
-        if (q.gotWork()) return false;
+        if (!q.empty()) return false;
         q.push_back(new Task("A"));
-        if (!q.gotWork()) return false;
+        if (q.empty()) return false;
         q.push_front(new Task("B"));
         q.push_back(new Task("C"));
         q.push_back(new Task("D"));
@@ -35,22 +35,22 @@ class TestTaskQueueList : public TestCase {
           Task *task;
         };
 
-        if (!q.get(taskBase) || task->name != "B") return false;
-        if (!q.get(taskBase) || task->name != "A") return false;
-        if (!q.get(taskBase) || task->name != "C") return false;
-        if (!q.get(taskBase) || task->name != "D") return false;
-        if (q.gotWork() || q.get(taskBase)) return false;
+        if (!q.pop_front(taskBase) || task->name != "B") return false;
+        if (!q.pop_front(taskBase) || task->name != "A") return false;
+        if (!q.pop_front(taskBase) || task->name != "C") return false;
+        if (!q.pop_front(taskBase) || task->name != "D") return false;
+        if (!q.empty() || q.pop_front(taskBase)) return false;
 
         q.push_front(new Task("A"));
         q.push_front(new Task("B"));
         q.push_front(new Task("C"));
         q.push_front(new Task("D"));
 
-        if (!q.steal(taskBase) || task->name != "A") return false;
-        if (!q.steal(taskBase) || task->name != "B") return false;
-        if (!q.steal(taskBase) || task->name != "C") return false;
-        if (!q.steal(taskBase) || task->name != "D") return false;
-        if (q.gotWork() || q.steal(taskBase)) return false;
+        if (!q.pop_back(taskBase) || task->name != "A") return false;
+        if (!q.pop_back(taskBase) || task->name != "B") return false;
+        if (!q.pop_back(taskBase) || task->name != "C") return false;
+        if (!q.pop_back(taskBase) || task->name != "D") return false;
+        if (!q.empty() || q.pop_back(taskBase)) return false;
 
         return true;
     }
@@ -67,11 +67,11 @@ class TestTaskQueueList : public TestCase {
             q.push_back(new Task("C"));
             q.push_back(new Task("D"));
             q.erase_if(IsBPred());
-            if (!q.get(taskBase) || task->name != "A") return false;
-            if (!q.get(taskBase) || task->name != "E") return false;
-            if (!q.get(taskBase) || task->name != "C") return false;
-            if (!q.get(taskBase) || task->name != "D") return false;
-            if (q.gotWork() || q.get(taskBase)) return false;
+            if (!q.pop_front(taskBase) || task->name != "A") return false;
+            if (!q.pop_front(taskBase) || task->name != "E") return false;
+            if (!q.pop_front(taskBase) || task->name != "C") return false;
+            if (!q.pop_front(taskBase) || task->name != "D") return false;
+            if (!q.empty() || q.pop_front(taskBase)) return false;
         }
         {
             TaskQueue<OpDefault> q;
@@ -79,9 +79,9 @@ class TestTaskQueueList : public TestCase {
             q.push_back(new Task("B"));
             q.push_back(new Task("C"));
             q.erase_if(IsBPred());
-            if (!q.get(taskBase) || task->name != "A") return false;
-            if (!q.get(taskBase) || task->name != "C") return false;
-            if (q.gotWork() || q.get(taskBase)) return false;
+            if (!q.pop_front(taskBase) || task->name != "A") return false;
+            if (!q.pop_front(taskBase) || task->name != "C") return false;
+            if (!q.empty() || q.pop_front(taskBase)) return false;
         }
         {
             TaskQueue<OpDefault> q;
@@ -91,7 +91,7 @@ class TestTaskQueueList : public TestCase {
             q.push_back(new Task("B"));
             q.push_back(new Task("B"));
             q.erase_if(IsBPred());
-            if (q.gotWork() || q.get(taskBase)) return false;
+            if (!q.empty() || q.pop_front(taskBase)) return false;
         }
         {
             TaskQueue<OpDefault> q;
@@ -101,9 +101,9 @@ class TestTaskQueueList : public TestCase {
             q.push_back(new Task("C"));
             q.push_back(new Task("B"));
             q.erase_if(IsBPred());
-            if (!q.get(taskBase) || task->name != "A") return false;
-            if (!q.get(taskBase) || task->name != "C") return false;
-            if (q.gotWork() || q.get(taskBase)) return false;
+            if (!q.pop_front(taskBase) || task->name != "A") return false;
+            if (!q.pop_front(taskBase) || task->name != "C") return false;
+            if (!q.empty() || q.pop_front(taskBase)) return false;
         }
         {
             TaskQueue<OpDefault> q;
@@ -112,9 +112,9 @@ class TestTaskQueueList : public TestCase {
             q.push_back(new Task("B"));
             q.push_back(new Task("C"));
             q.erase_if(IsBPred());
-            if (!q.get(taskBase) || task->name != "A") return false;
-            if (!q.get(taskBase) || task->name != "C") return false;
-            if (q.gotWork() || q.get(taskBase)) return false;
+            if (!q.pop_front(taskBase) || task->name != "A") return false;
+            if (!q.pop_front(taskBase) || task->name != "C") return false;
+            if (!q.empty() || q.pop_front(taskBase)) return false;
         }
 
         return true;

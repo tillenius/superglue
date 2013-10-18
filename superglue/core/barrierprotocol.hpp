@@ -51,7 +51,7 @@ public:
                         return;
                     }
 
-                    if (wwt.getTaskQueue().gotWorkSafe()) {
+                    if (!wwt.getTaskQueue().empty_safe()) {
                         abort = 1;
                         Atomic::memory_fence_producer();
                         // we have to abort -- indicate others and start workloop
@@ -75,7 +75,7 @@ public:
                     wwt.my_barrier_state = 0;
                     const int local_abort(*static_cast<volatile int *>(&abort));
                     if (local_abort != 1) {
-                        if (wwt.getTaskQueue().gotWorkSafe()) {
+                        if (!wwt.getTaskQueue().empty_safe()) {
                             // we have to abort -- start next phase and exit to work-loop
                             abort = 1;
                             Atomic::memory_fence_producer();
@@ -106,7 +106,7 @@ public:
                     state = 2;
                     return;
                 }
-                if (wwt.getTaskQueue().gotWorkSafe()) {
+                if (!wwt.getTaskQueue().empty_safe()) {
                     // we have to abort -- start next phase and exit to work-loop
                     abort = 1;
                     Atomic::memory_fence_producer();
@@ -125,7 +125,7 @@ public:
                     return;
                 }
 
-                if (wwt.getTaskQueue().gotWorkSafe()) {
+                if (!wwt.getTaskQueue().empty_safe()) {
                     abort = 1;
                     Atomic::memory_fence_producer();
                     // we have to abort -- indicate others and start workloop
@@ -172,13 +172,13 @@ public:
                     const int local_abort(*static_cast<volatile int *>(&abort));
                     if (local_abort == 1)
                         break;
-                    if (TaskExecutor<Options>::getTaskQueue().gotWorkSafe())
+                    if (!TaskExecutor<Options>::getTaskQueue().empty_safe())
                         break;
                     return;
                 }
 
                 const int local_abort(*static_cast<volatile int *>(&abort));
-                if (local_abort == 1 || TaskExecutor<Options>::getTaskQueue().gotWorkSafe()) {
+                if (local_abort == 1 || !TaskExecutor<Options>::getTaskQueue().empty_safe()) {
                     while (*static_cast<volatile int *>(&state) != 0)
                         while (TaskExecutor<Options>::executeTasks());
                     break;

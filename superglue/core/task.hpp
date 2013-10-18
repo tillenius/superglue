@@ -7,6 +7,7 @@
 #include "core/access.hpp"
 #include "platform/atomic.hpp"
 #include <string>
+#include <stdint.h>
 
 template<typename Options> class TaskBase;
 template<typename Options> class TaskExecutor;
@@ -133,7 +134,7 @@ class Task_ListQueue<Options, typename Options::Disable> {};
 template<typename Options>
 class Task_ListQueue<Options, typename Options::Enable> {
 public:
-    std::ptrdiff_t nextPrev;
+    uintptr_t nextPrev;
     Task_ListQueue() : nextPrev(0) {}
 };
 
@@ -160,7 +161,8 @@ public:
 // ============================================================================
 template<typename Options>
 class TaskBaseDefault
-  : public detail::Task_PassTaskExecutor<Options>,
+  : public detail::Task_ListQueue<Options>,
+    public detail::Task_PassTaskExecutor<Options>,
     public detail::Task_GlobalId<Options>,
     public detail::Task_StolenFlag<Options>,
     public detail::Task_TaskName<Options>,
@@ -203,10 +205,7 @@ public:
 };
 
 // export Options::TaskBaseType as TaskBase (default: TaskBaseDefault<Options>)
-template<typename Options> class TaskBase
- : public detail::Task_ListQueue<Options>,
-   public Options::TaskBaseType
-{};
+template<typename Options> class TaskBase : public Options::TaskBaseType {};
 
 // ============================================================================
 // TaskDefault : adds registerAccess()

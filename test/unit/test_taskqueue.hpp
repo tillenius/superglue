@@ -15,9 +15,9 @@ class TestTaskQueue : public TestCase {
     static bool testTaskQueue(std::string &name) { name = "testTaskQueue";
         TaskQueue<OpDefault> q;
 
-        if (q.gotWork()) return false;
+        if (!q.empty()) return false;
         q.push_back(new Task("A"));
-        if (!q.gotWork()) return false;
+        if (q.empty()) return false;
         q.push_front(new Task("B"));
 
         union {
@@ -25,20 +25,20 @@ class TestTaskQueue : public TestCase {
           Task *task;
         };
 
-        if (!q.get(taskBase)) return false;
+        if (!q.pop_front(taskBase)) return false;
         if (task->name != "B") return false;
-        if (!q.get(taskBase)) return false;
+        if (!q.pop_front(taskBase)) return false;
         if (task->name != "A") return false;
-        if (q.get(taskBase)) return false;
+        if (q.pop_front(taskBase)) return false;
 
         q.push_front(new Task("A"));
         q.push_front(new Task("B"));
 
-        if (!q.steal(taskBase)) return false;
+        if (!q.pop_back(taskBase)) return false;
         if (task->name != "A") return false;
-        if (!q.steal(taskBase)) return false;
+        if (!q.pop_back(taskBase)) return false;
         if (task->name != "B") return false;
-        if (q.steal(taskBase)) return false;
+        if (q.pop_back(taskBase)) return false;
 
         return true;
     }

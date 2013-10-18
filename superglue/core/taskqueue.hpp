@@ -5,6 +5,8 @@
 #include "platform/spinlock.hpp"
 #include "core/log.hpp"
 
+#include <stdint.h>
+
 template<typename, typename> class Log_DumpState;
 template<typename Options> class TaskBase;
 template<typename Options> class Log;
@@ -15,7 +17,7 @@ class TaskQueueUnsafe<Options, typename Options::Disable>
     typedef typename Types<Options>::taskdeque_t parent;
 
 public:
-    bool get(TaskBase<Options> * &elem) {
+    bool pop_front(TaskBase<Options> * &elem) {
         if (parent::empty())
             return false;
 
@@ -24,7 +26,7 @@ public:
         return true;
     }
 
-    bool steal(TaskBase<Options> * &elem) {
+    bool pop_back(TaskBase<Options> * &elem) {
         if (parent::empty())
             return false;
         return Options::Scheduler::stealTask(*this, elem);
@@ -34,38 +36,25 @@ public:
         parent::insert(parent::begin(), rhs.begin(), rhs.end());
     }
 
-    bool gotWork() {
-        return !parent::empty();
+    bool empty() {
+        return parent::empty();
+    }
+
+    template<typename UnaryPredicate>
+    void erase_if(UnaryPredicate pred) {
+        remove_if(parent::begin(), parent::end(), pred);
     }
 };
 
 // TaskQueueUnsafe is a (non-thread-safe) doubly linked list
-// (or "subtraction linked list", see http://en.wikipedia.org/wiki/XOR_linked_list)
+// (or "xor linked list", see http://en.wikipedia.org/wiki/XOR_linked_list)
 //
-// To walk forward in the list: next = prev + curr->nextPrev
+// To walk forward in the list: next = prev ^ curr->nextPrev
 //
-// Example: List structure and removal of an element.
-//   List elements: A, B, C
-//   Algorithm pointers: p (previous), c (current), n (next)
+// Example: List elements: A, B, C
 //
-//        p     c     n
 //  0     A     B     C     0
-// A-0   B-0   C-A   0-B    C
-//
-// update prev->nextPrev:
-//          p       c     n
-//  0       A       B     C     0
-// A-0   B-0-B+C   C-A   0-B    C
-//
-// update next->nextPrev:
-//          p       c       n
-//  0       A       B       C     0
-// A-0   B-0-B+C   C-A   D-B+B-A  C
-//
-// result:
-//        p    n
-//  0     A    C    0
-// A-0   C-0  D-A   C
+//  A    0^B   A^B   B^0    C
 
 template<typename Options>
 class TaskQueueUnsafe<Options, typename Options::Enable> {
@@ -84,8 +73,8 @@ public:
             first = last = elem;
         }
         else {
-            last->nextPrev = last->nextPrev + reinterpret_cast<std::ptrdiff_t>(elem);
-            elem->nextPrev = -reinterpret_cast<std::ptrdiff_t>(last);
+            last->nextPrev = last->nextPrev ^ reinterpret_cast<uintptr_t>(elem);
+            elem->nextPrev = reinterpret_cast<uintptr_t>(last);
             last = elem;
         }
     }
@@ -96,8 +85,8 @@ public:
             first = last = elem;
         }
         else {
-            first->nextPrev -= reinterpret_cast<std::ptrdiff_t>(elem);
-            elem->nextPrev = reinterpret_cast<std::ptrdiff_t>(first);
+            first->nextPrev ^= reinterpret_cast<uintptr_t>(elem);
+            elem->nextPrev = reinterpret_cast<uintptr_t>(first);
             first = elem;
         }
     }
@@ -109,13 +98,13 @@ public:
             last = rhs.last;
         }
         else {
-            first->nextPrev -= reinterpret_cast<std::ptrdiff_t>(rhs.last);
-            rhs.last->nextPrev += reinterpret_cast<std::ptrdiff_t>(first);
+            first->nextPrev ^= reinterpret_cast<uintptr_t>(rhs.last);
+            rhs.last->nextPrev ^= reinterpret_cast<uintptr_t>(first);
             first = rhs.first;
         }
     }
 
-    bool get(TaskBase<Options> * &elem) {
+    bool pop_front(TaskBase<Options> * &elem) {
         if (first == 0)
             return false;
 
@@ -124,21 +113,21 @@ public:
         if (first == 0)
             last = 0;
         else
-            first->nextPrev += reinterpret_cast<std::ptrdiff_t>(elem);
+            first->nextPrev ^= reinterpret_cast<uintptr_t>(elem);
 
         return true;
     }
 
-    bool steal(TaskBase<Options> * &elem) {
+    bool pop_back(TaskBase<Options> * &elem) {
         if (last == 0)
             return false;
 
         elem = last;
-        last = reinterpret_cast<TaskBase<Options> *>(-last->nextPrev);
+        last = reinterpret_cast<TaskBase<Options> *>(last->nextPrev);
         if (last == 0)
             first = 0;
         else
-            last->nextPrev -= reinterpret_cast<std::ptrdiff_t>(elem);
+            last->nextPrev ^= reinterpret_cast<uintptr_t>(elem);
 
         return true;
     }
@@ -153,7 +142,7 @@ public:
         for (;curr != 0;) {
             visitor.visit(curr);
             next = reinterpret_cast<TaskBase<Options> *>(
-                reinterpret_cast<std::ptrdiff_t>(prev) + curr->nextPrev);
+                reinterpret_cast<uintptr_t>(prev) ^ curr->nextPrev);
             prev = curr;
             curr = next;
         }
@@ -171,7 +160,7 @@ public:
         for (;;) {
             std::cerr << curr << " ";
             next = reinterpret_cast<TaskBase<Options> *>(
-                reinterpret_cast<std::ptrdiff_t>(prev) + curr->nextPrev);
+                reinterpret_cast<uintptr_t>(prev) ^ curr->nextPrev);
             if (next == 0) {
                 std::cerr << std::endl;
                 return;
@@ -181,8 +170,8 @@ public:
         }
     }
 
-    template<typename Pred>
-    void erase_if(Pred) {
+    template<typename UnaryPredicate>
+    void erase_if(UnaryPredicate pred) {
         if (first == 0)
             return;
         TaskBase<Options> *prev(0);
@@ -190,15 +179,15 @@ public:
 
         for (;;) {
             TaskBase<Options> *next = reinterpret_cast<TaskBase<Options> *>(
-                reinterpret_cast<std::ptrdiff_t>(prev) + curr->nextPrev);
+                reinterpret_cast<uintptr_t>(prev) ^ curr->nextPrev);
 
-            if (Pred::test(curr)) {
+            if (pred(curr)) {
                 if (prev == 0)
                     first = next;
                 else {
                     prev->nextPrev = prev->nextPrev
-                        - reinterpret_cast<std::ptrdiff_t>(curr)
-                        + reinterpret_cast<std::ptrdiff_t>(next);
+                        ^ reinterpret_cast<uintptr_t>(curr)
+                        ^ reinterpret_cast<uintptr_t>(next);
                 }
 
                 if (next == 0) {
@@ -207,8 +196,8 @@ public:
                 }
                 else {
                     next->nextPrev = next->nextPrev
-                        + reinterpret_cast<std::ptrdiff_t>(curr)
-                        - reinterpret_cast<std::ptrdiff_t>(prev);
+                        ^ reinterpret_cast<uintptr_t>(curr)
+                        ^ reinterpret_cast<uintptr_t>(prev);
                 }
 
                 prev = 0;
@@ -225,7 +214,7 @@ public:
         }
     }
 
-    bool gotWork() { return first != 0; }
+    bool empty() { return first == 0; }
 
     void swap(TaskQueueUnsafe &rhs) {
         std::swap(first, rhs.first);
@@ -244,7 +233,7 @@ public:
         for (;;) {
             ++count;
             next = reinterpret_cast<TaskBase<Options> *>(
-                reinterpret_cast<std::ptrdiff_t>(prev) + curr->nextPrev);
+                reinterpret_cast<uintptr_t>(prev) ^ curr->nextPrev);
             if (next == 0)
                 return count;
             prev = curr;
@@ -286,23 +275,23 @@ public:
         TaskQueueUnsafe<Options>::push_front_list(list);
     }
 
-    bool get(TaskBase<Options> * &elem) {
+    bool pop_front(TaskBase<Options> * &elem) {
         SpinLockScoped lock(spinlock);
-        return TaskQueueUnsafe<Options>::get(elem);
+        return TaskQueueUnsafe<Options>::pop_front(elem);
     }
 
-    bool steal(TaskBase<Options> * &elem) {
-        if (!TaskQueueUnsafe<Options>::gotWork())
+    bool pop_back(TaskBase<Options> * &elem) {
+        if (TaskQueueUnsafe<Options>::empty())
             return false;
         SpinLockScoped lock(spinlock);
-        return TaskQueueUnsafe<Options>::steal(elem);
+        return TaskQueueUnsafe<Options>::pop_back(elem);
     }
 
     bool try_steal(TaskBase<Options> * &elem) {
         SpinLockTryLock lock(spinlock);
         if (!lock.success)
             return false;
-        return TaskQueueUnsafe<Options>::steal(elem);
+        return TaskQueueUnsafe<Options>::pop_back(elem);
     }
 
     void swap(TaskQueueUnsafe<Options> &rhs) {
@@ -310,9 +299,9 @@ public:
         TaskQueueUnsafe<Options>::swap(rhs);
     }
 
-    bool gotWorkSafe() { 
+    bool empty_safe() { 
         SpinLockScoped lock(spinlock);
-        return TaskQueueUnsafe<Options>::gotWork();
+        return TaskQueueUnsafe<Options>::empty();
     }
 
 };

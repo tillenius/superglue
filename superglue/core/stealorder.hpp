@@ -30,13 +30,13 @@ public:
         for (size_t i = random; i < numQueues; ++i) {
             if (i == id)
                 continue;
-            if (taskQueues[i]->steal(dest))
+            if (taskQueues[i]->pop_back(dest))
                 return true;
         }
         for (size_t i = 0; i < random; ++i) {
             if (i == id)
                 continue;
-            if (taskQueues[i]->steal(dest))
+            if (taskQueues[i]->pop_back(dest))
                 return true;
         }
         return false;

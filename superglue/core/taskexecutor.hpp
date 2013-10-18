@@ -201,10 +201,8 @@ public:
 
     // Called from this thread only
     TaskBase<Options> *getTaskInternal() {
-        TaskExecutor<Options> *this_(static_cast<TaskExecutor<Options> *>(this));
-
         TaskBase<Options> *task = 0;
-        if (this_->readyList.get(task))
+        if (readyList.pop_front(task))
             return task;
 
         return detail::TaskExecutor_Stealing<Options>::steal();
