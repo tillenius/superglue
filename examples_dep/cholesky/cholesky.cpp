@@ -65,6 +65,7 @@ struct Options : public DefaultOptions<Options> {
     typedef MyHandle<Options> HandleType;
     typedef Enable Logging;
     typedef TaskExecutorTiming<Options> TaskExecutorInstrumentation;
+    typedef Enable TaskName;
 };
 
 // ==========================================================================
@@ -86,6 +87,7 @@ struct gemm : public Task<Options, 3> {
         double DONE=1.0, DMONE=-1.0;
         dgemm("N", "T", &nb, &nb, &nb, &DMONE, a, &nb, b, &nb, &DONE, c, &nb);
     }
+    std::string getName() { return "gemm"; }
 };
 
 struct syrk : public Task<Options, 2> {
@@ -101,6 +103,7 @@ struct syrk : public Task<Options, 2> {
         int nb = NB;
         dsyrk("L", "N", &nb, &nb, &DMONE, a, &nb, &DONE, c, &nb);
     }
+    std::string getName() { return "syrk"; }
 };
 
 struct potrf : public Task<Options, 1> {
@@ -113,6 +116,7 @@ struct potrf : public Task<Options, 1> {
         int nb = NB;
         dpotrf("L", &nb, a, &nb, &info);
     }
+    std::string getName() { return "potrf"; }
 };
 
 struct trsm : public Task<Options, 2> {
@@ -127,6 +131,7 @@ struct trsm : public Task<Options, 2> {
         int nb = NB;
         dtrsm("R", "L", "T", "N", &nb, &nb, &DONE, a, &nb, b, &nb);
     }
+    std::string getName() { return "trsm"; }
 };
 
 // ==========================================================================
