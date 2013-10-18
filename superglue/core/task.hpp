@@ -4,11 +4,10 @@
 #include "core/log_dag.hpp"
 #include "core/types.hpp"
 #include "core/accessutil.hpp"
+#include "core/access.hpp"
 #include "platform/atomic.hpp"
 #include <string>
 
-template<typename Options> class Access;
-template<typename Options> class Handle;
 template<typename Options> class TaskBase;
 template<typename Options> class TaskExecutor;
 
@@ -230,7 +229,7 @@ public:
         a.requiredVersion = version;
         if (AccessUtil<Options>::needsLock(type))
             a.setNeedsLock(true);
-        Log_DAG<Options>::dag_addDependency(static_cast<TaskBase<Options> *>(this), &a, type);
+        Log_DAG<Options>::dag_addDependency(static_cast<TaskBase<Options> *>(this), handle, version, type);
         ++TaskBase<Options>::numAccess;
     }
     void registerAccess(AccessType type, Handle<Options> *handle) {
@@ -257,7 +256,7 @@ public:
         Access<Options> &a(access[access.size()-1]);
         if (AccessUtil<Options>::needsLock(type))
             a.setNeedsLock(true);
-        Log_DAG<Options>::dag_addDependency(static_cast<TaskBase<Options> *>(this), &a, type);
+        Log_DAG<Options>::dag_addDependency(static_cast<TaskBase<Options> *>(this), handle, version, type);
         ++TaskBase<Options>::numAccess;
         TaskBase<Options>::accessPtr = &access[0]; // vector may be reallocated at any add
     }

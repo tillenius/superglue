@@ -15,7 +15,6 @@
 #include <set>
 #include <vector>
 
-template<typename Options> class Access;
 template<typename Options> class Handle;
 
 struct Node {
@@ -65,8 +64,12 @@ struct LogDagData {
     std::vector<TaskDependency> taskDependency;
 
     void clear() {
-        LogDagData newdata;
-        std::swap(*this, newdata);
+        nodes.clear();
+        tasknodes.clear();
+        datanodes.clear();
+        ranks.clear();
+        taskFinish.clear();
+        taskDependency.clear();
     }
 };
 
@@ -102,7 +105,7 @@ struct GetStyle<Options, true> {
 
 template<typename Options>
 std::string getStyle(TaskBase<Options> *task) {
-    return GetStyle<Options, TypeHasGetStyle< typename Options::TaskBaseType >::value >::getStyle(task);
+    return GetStyle<Options, TypeHasGetStyle< TaskBase<Options> >::value >::getStyle(task);
 }
 
 
@@ -114,14 +117,16 @@ template<typename Options, typename T = typename Options::Logging_DAG> class Log
 
 template<typename Options>
 class Log_DAG<Options, typename Options::Disable> {
+    typedef typename Options::version_t version_t;
 public:
     static void dag_taskFinish(TaskBase<Options> *, Handle<Options> *, size_t) {}
-    static void dag_addDependency(TaskBase<Options> *, Access<Options> *, int) {}
+    static void dag_addDependency(TaskBase<Options> *, Handle<Options> *, version_t required_version, int) {}
     static void dag_newrank() {};
 };
 
 template<typename Options>
 class Log_DAG<Options, typename Options::Enable> {
+    typedef typename Options::version_t version_t;
 private:
     static size_t addNode(LogDagData &data, std::string name, std::string style, size_t type) {
         data.nodes.push_back(Node(name, style, type));
@@ -164,15 +169,15 @@ public:
         data.taskFinish.push_back(TaskFinish(task->getGlobalId(), handle->getGlobalId(), newVersion));
     }
 
-    static void dag_addDependency(TaskBase<Options> *task, Access<Options> *access, size_t type) {
+    static void dag_addDependency(TaskBase<Options> *task, Handle<Options> *handle, version_t required_version, int type) {
         LogDagData &data(getDagData());
         SpinLockScoped lock(data.spinlock);
         // have to register nodes here, as we cannot get name otherwise.
         registerTaskNode(data, task);
-        registerDataNode(data, access->getHandle(), access->requiredVersion);
+        registerDataNode(data, handle, required_version);
         data.taskDependency.push_back(TaskDependency(task->getGlobalId(),
-                                                     access->getHandle()->getGlobalId(),
-                                                     access->requiredVersion, type));
+                                                     handle->getGlobalId(),
+                                                     required_version, type));
     }
 
     static void dag_newrank() {
