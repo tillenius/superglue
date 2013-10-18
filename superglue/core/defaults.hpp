@@ -52,7 +52,7 @@ struct DefaultOptions {
     // Dependency Checking Options
     struct LazyDependencyChecking {};
     struct EagerDependencyChecking {};
-    typedef LazyDependencyChecking DependencyChecking;
+    typedef EagerDependencyChecking DependencyChecking;
 
     // Contributions Options
     typedef Disable Contributions;
