@@ -172,7 +172,7 @@ struct Atomic {
     template<typename T> static T add_nv(T *ptr, size_t n) { return detail::AtomicImpl::add_nv(ptr, n); }
     template<typename T> static T increase_nv(T *ptr) { return detail::AtomicImpl::increase_nv(ptr); }
     template<typename T> static T decrease_nv(T *ptr) { return detail::AtomicImpl::decrease_nv(ptr); }
-    template<typename T> static T cas(volatile T *ptr, T oldval, T newval) { return detail::AtomicImpl::cas(ptr, oldval, newval); }
+    template<typename T> static T cas(T *ptr, T oldval, T newval) { return detail::AtomicImpl::cas(ptr, oldval, newval); }
     template<typename T> static T swap(volatile T *ptr, T newval) {
         for (;;) {
             T prev = *ptr;
