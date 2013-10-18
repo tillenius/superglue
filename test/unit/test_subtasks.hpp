@@ -75,7 +75,7 @@ class TestSubtasks : public TestCase {
     }
 
     static bool testSubtasksDep(std::string &name) { name = "testSubtasksDep";
-        static volatile bool subtask_finished = false;
+        static volatile int subtask_finished = 0;
         static RunOrder r;
 
         struct Subtask : public Task<Options> {
@@ -83,7 +83,7 @@ class TestSubtasks : public TestCase {
             Subtask(size_t value_) : value(value_) {}
             void run(TaskExecutor<Options> &te) {
                 r.store(value);
-                subtask_finished = true;
+                Atomic::increase(&subtask_finished);
             }
         };
 
@@ -98,7 +98,7 @@ class TestSubtasks : public TestCase {
                 te.submit(new Subtask(3));
                 te.submit(new Subtask(4));
                 // subtasks may start directly
-                while (!subtask_finished);
+                while (subtask_finished != 4);
             }
         };
 
