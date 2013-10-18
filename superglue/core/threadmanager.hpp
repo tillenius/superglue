@@ -147,7 +147,8 @@ public:
 
         threads = new WorkerThread<Options>*[numWorkers];
         startBarrier = new Barrier(numWorkers+1);
-        Log<Options>::init(numWorkers+1);
+        Log<Options>::init();
+        Log<Options>::registerThread(0); // register main thread
         for (size_t i = 0; i < numWorkers; ++i) {
             WorkerThreadStarter<Options> *wts =
                 new WorkerThreadStarter<Options>(i+1, *this_);

@@ -8,6 +8,7 @@
 #include "platform/spinlock.hpp"
 #include "platform/threads.hpp"
 #include "platform/gettime.hpp"
+#include "platform/tls.hpp"
 #include <vector>
 #include <fstream>
 #include <map>
@@ -29,25 +30,25 @@ namespace detail {
 class GetName {
 private:
 
-    template<typename O>
-    static std::string getName(TaskBase<O> *task, typename O::Enable) {
+    template<typename Options>
+    static std::string getName(TaskBase<Options> *task, typename Options::Enable) {
         return task->getName();
     }
 
-    template<typename O>
-    static std::string getName(TaskBase<O> *task, typename O::Disable) {
+    template<typename Options>
+    static std::string getName(TaskBase<Options> *task, typename Options::Disable) {
         char name[30];
         sprintf(name, "%p", (void *) task);
         return name;
     }
 
-    template<typename O>
-    static std::string getName(HandleBase<O> *handle, typename O::Enable) {
+    template<typename Options>
+    static std::string getName(HandleBase<Options> *handle, typename Options::Enable) {
         return handle->getName();
     }
 
-    template<typename O>
-    static std::string getName(HandleBase<O> *handle, typename O::Disable) {
+    template<typename Options>
+    static std::string getName(HandleBase<Options> *handle, typename Options::Disable) {
         char name[30];
         sprintf(name, "%p", (void *) handle);
         return name;
@@ -55,11 +56,11 @@ private:
 
 public:
 
-    template<typename O>
-    static std::string getName(TaskBase<O> *task) { return getName(task, typename O::TaskName()); }
+    template<typename Options>
+    static std::string getName(TaskBase<Options> *task) { return getName(task, typename Options::TaskName()); }
 
-    template<typename O>
-    static std::string getName(HandleBase<O> *handle) { return getName(handle, typename O::HandleName()); }
+    template<typename Options>
+    static std::string getName(HandleBase<Options> *handle) { return getName(handle, typename Options::HandleName()); }
 
 };
 
@@ -98,7 +99,7 @@ public:
     static void clear() {}
 
     static void registerThread(int id) {}
-    static void init(size_t) {}
+    static void init() {}
 };
 
 template<typename Options>
@@ -117,17 +118,17 @@ public:
     };
 
     struct ThreadData {
+        int id;
         std::vector<Event> events;
         std::stack<Time::TimeUnit> timestack;
-        ThreadData() {
+        ThreadData(int id_) : id(id_) {
             events.reserve(65536);
         }
     };
     struct LogData {
+        tls_data<ThreadData> tlsdata;
         SpinLock initspinlock;
-        std::map<ThreadIDType, int> threadmap;
-        ThreadData *threaddata;
-        LogData() : threaddata(0) {}
+        std::vector<ThreadData*> threaddata;
     };
 
 public:
@@ -137,9 +138,7 @@ public:
     }
 
     static ThreadData &getThreadData() {
-        LogData &data(getLogData());
-        const int id = data.threadmap[ThreadUtil::getCurrentThreadId()];
-        return data.threaddata[id];
+        return *getLogData().tlsdata.get();
     }
 
     static void add(const Event &event) {
@@ -193,12 +192,12 @@ public:
         std::ofstream out(filename);
         LogData &data(getLogData());
 
-        const size_t num = data.threadmap.size();
+        const size_t num = data.threaddata.size();
         std::vector<std::pair<Event, size_t> > merged;
 
         for (size_t i = 0; i < num; ++i) {
-            for (size_t j = 0; j < data.threaddata[i].events.size(); ++j)
-                merged.push_back(std::make_pair(data.threaddata[i].events[j], i));
+            for (size_t j = 0; j < data.threaddata[i]->events.size(); ++j)
+                merged.push_back(std::make_pair(data.threaddata[i]->events[j], data.threaddata[i]->id));
         }
 
         std::sort(merged.begin(), merged.end());
@@ -222,7 +221,7 @@ public:
         Time::TimeUnit minimum = 0;
         bool gotMinimum = false;
 
-        const size_t numt = logdata.threadmap.size();
+        const size_t numt = logdata.threaddata.size();
         for (size_t j = 0; j < numt; ++j) {
             ThreadData &data(logdata.threaddata[j]);
             const size_t num = data.events.size();
@@ -247,24 +246,32 @@ public:
 
     static void clear() {
         LogData &data(getLogData());
-        const size_t num = data.threadmap.size();
+        const size_t num = data.threaddata.size();
         for (size_t i = 0; i < num; ++i)
             data.threaddata[i].events.clear();
     }
 
-    static void registerThread(int id) {
-        LogData &data(getLogData());
-        SpinLockScoped lock(data.initspinlock);
-        data.threadmap[ThreadUtil::getCurrentThreadId()] = id;
+    static void init() {
+        // This method only needs to be called once,
+        // but it is allowed to call is several times,
+        // as long as its from the same thread.
+
+        // The reason to allow this to be called several
+        // times is to be able to initialize and use
+        // the logging machinery before starting up
+        // SuperGlue, but still call here in the SuperGlue
+        // startup.
+
+		// However, no initialization is currently needed.
     }
 
-    static void init(const size_t numCores) {
+    static void registerThread(int id) {
         LogData &data(getLogData());
-        if (data.threaddata != 0)
-            delete [] data.threaddata;
-        data.threaddata = new ThreadData[numCores];
-        data.threadmap.clear();
-        registerThread(0);
+        ThreadData *td = new ThreadData(id);
+        data.tlsdata.set(td);
+
+        SpinLockScoped lock(data.initspinlock);
+        data.threaddata.push_back(td);
     }
 };
 
