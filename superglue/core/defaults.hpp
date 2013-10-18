@@ -69,7 +69,8 @@ struct DefaultOptions {
     // Instrumentation
     struct TaskExecutorNoInstrumentation {
         static void init(TaskExecutor<Options> &) {}
-        static void destroy() {}
+        static void destroy(TaskExecutor<Options> &) {}
+        static void finalize() {}
         static void runTaskBefore(TaskBase<Options> *) {}
         static void runTaskAfter(TaskBase<Options> *) {}
         static void taskNotRunDeps() {}

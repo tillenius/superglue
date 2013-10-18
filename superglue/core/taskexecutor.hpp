@@ -300,7 +300,8 @@ public:
     }
 
     ~TaskExecutorBase() {
-        Options::TaskExecutorInstrumentation::destroy();
+        TaskExecutor<Options> *this_(static_cast<TaskExecutor<Options> *>(this));
+        Options::TaskExecutorInstrumentation::destroy(*this_);
     }
 
     // Called from this thread only

@@ -2,10 +2,14 @@
 #define __INSTR_TASKTIMING_HPP__
 
 template<typename Options>
+class TaskExecutor;
+
+template<typename Options>
 struct TaskExecutorTiming {
     Time::TimeUnit start, stop;
     static void init(TaskExecutor<Options> &te) {}
-    static void destroy() {}
+    static void destroy(TaskExecutor<Options> &te) {}
+    static void finalize() {}
     void runTaskBefore(TaskBase<Options> *) {
         start = Time::getTime();
     }

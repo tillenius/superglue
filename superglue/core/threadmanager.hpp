@@ -176,6 +176,8 @@ public:
             delete threads[i];
 
         delete[] threads;
+
+        Options::TaskExecutorInstrumentation::finalize();
     }
 
     size_t getNumWorkers() const { return numWorkers; }
