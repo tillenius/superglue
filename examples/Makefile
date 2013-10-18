@@ -13,4 +13,4 @@ bin:
 clean:
 	rm -rf bin
 
-.PHONY: $(EXAMPLES)
+.PHONY: all clean $(EXAMPLES)
