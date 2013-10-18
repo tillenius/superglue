@@ -22,6 +22,8 @@ struct DefaultOptions {
     typedef DefaultStealOrder<Options> StealOrder;
     typedef ReadWriteAdd AccessInfoType;
     typedef unsigned int version_t;
+    typedef unsigned int handleid_t;
+    typedef unsigned int taskid_t;
     typedef DefaultHardwareModel HardwareModel;
 
     // Types that can be overloaded

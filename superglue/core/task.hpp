@@ -50,14 +50,15 @@ class Task_GlobalId<Options, typename Options::Disable> {};
 
 template<typename Options>
 class Task_GlobalId<Options, typename Options::Enable> {
+    typedef typename Options::taskid_t taskid_t;
 private:
-    size_t id;
+    taskid_t id;
 public:
     Task_GlobalId() {
-        static size_t global_task_id = 0;
+        static taskid_t global_task_id = 0;
         id = Atomic::increase_nv(&global_task_id);
     }
-    size_t getGlobalId() const { return id; }
+    taskid_t getGlobalId() const { return id; }
 };
 
 // ============================================================================

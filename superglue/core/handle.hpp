@@ -42,16 +42,17 @@ class Handle_GlobalId<Options, typename Options::Disable> {};
 
 template<typename Options>
 class Handle_GlobalId<Options, typename Options::Enable> {
+    typedef typename Options::handleid_t handleid_t;
 private:
-    size_t id;
+    handleid_t id;
 public:
 
     Handle_GlobalId() {
-        static size_t global_handle_id = 0;
+        static handleid_t global_handle_id = 0;
         id = Atomic::increase_nv(&global_handle_id);
     }
 
-    size_t getGlobalId() const { return id; }
+    handleid_t getGlobalId() const { return id; }
 };
 
 // ============================================================================
@@ -125,13 +126,14 @@ template<typename Options, typename T = typename Options::Lockable> class Handle
 
 template<typename Options>
 class Handle_Lockable<Options, typename Options::Disable> {
+    typedef typename Options::version_t version_t;
 public:
-    size_t increaseCurrentVersionNoUnlock(TaskExecutor<Options> &taskExecutor) { 
+    version_t increaseCurrentVersionNoUnlock(TaskExecutor<Options> &taskExecutor) { 
         return increaseCurrentVersion(taskExecutor);
     }
-    size_t increaseCurrentVersion(TaskExecutor<Options> &taskExecutor) {
-        Handle<Options> *this_(static_cast<Handle<Options> *>(this));
-        size_t ver = this_->increaseCurrentVersionImpl();
+    version_t increaseCurrentVersion(TaskExecutor<Options> &taskExecutor) {
+        HandleBase<Options> *this_(static_cast<HandleBase<Options> *>(this));
+        version_t ver = Atomic::increase_nv(&this_->version);
         this_->versionQueue.notifyVersionListeners(taskExecutor, this_->version);
         return ver;
     }
@@ -140,6 +142,7 @@ public:
 template<typename Options>
 class Handle_Lockable<Options, typename Options::Enable> {
     template<typename, typename> friend class Handle_Contributions;
+    typedef typename Options::version_t version_t;
 private:
     // queue of tasks waiting for the lock
     TaskQueue<Options> lockListenerList;
@@ -187,20 +190,20 @@ public:
     }
 
     // for contributions that haven't actually got the lock
-    size_t increaseCurrentVersionNoUnlock(TaskExecutor<Options> &taskExecutor) {
+    version_t increaseCurrentVersionNoUnlock(TaskExecutor<Options> &taskExecutor) {
         Handle<Options> *this_(static_cast<Handle<Options> *>(this));
 
-        size_t ver = this_->increaseCurrentVersionImpl();
+        version_t ver = Atomic::increase_nv(&this_->version);
         this_->versionQueue.notifyVersionListeners(taskExecutor, this_->getCurrentVersion());
         return ver;
     }
 
-    size_t increaseCurrentVersion(TaskExecutor<Options> &taskExecutor) {
+    version_t increaseCurrentVersion(TaskExecutor<Options> &taskExecutor) {
         HandleBase<Options> *this_(static_cast<HandleBase<Options> *>(this));
 
         // first check if we owned the lock before version is increased
         // (otherwise someone else might grab the lock in between)
-        size_t ver;
+        version_t ver;
         if (dataLock.is_locked()) {
             dataLock.unlock();
             // (someone else can snatch the lock here. that is ok.)
@@ -246,10 +249,6 @@ public:
     VersionQueue<Options> versionQueue;
     // next required version for each access type
     SchedulerVersion<Options> requiredVersion;
-
-    size_t increaseCurrentVersionImpl() {
-        return Atomic::increase_nv(&version);
-    }
 
     HandleBase() : version(0) {}
     ~HandleBase() {
