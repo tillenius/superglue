@@ -289,8 +289,6 @@ public:
 
 public:
 
-    typename Options::UserThreadData userThreadData;
-
     TaskExecutorBase(int id_, ThreadManager<Options> &tm_)
       : id(id_), tm(tm_)
     {
