@@ -40,7 +40,6 @@ struct DefaultOptions {
     typedef Disable TaskId;              // tasks have a getGlobalId() method
     typedef Disable TaskPriorities;      // tasks must implement a getPriority() method
     typedef Disable TaskStealableFlag;   // tasks must implement a isStealable() method
-    typedef Disable TaskStolenFlag;      // tasks have a isStolen() method
     typedef Disable HandleName;          // handles have setName() and getName() methods
     typedef Disable HandleId;            // handels have a getGlobalId() method
     typedef Enable Lockable;             // handles can be locked
@@ -48,7 +47,6 @@ struct DefaultOptions {
     typedef Disable Subtasks;            // TaskExecutor has subtask() method
     typedef Disable PassTaskExecutor;    // the Task::run() method is called with the current TaskExecutor as parameter
     typedef Disable ThreadWorkspace;     // TaskExecutor have a getThreadWorkspace() method
-    typedef Disable ExecutorCurrentTask; // TaskExecutor have a getCurrentTask() method
     typedef Disable PauseExecution;      // No tasks are executed until setMayExecute(true) is called
     typedef Enable Stealing;             // Task stealing enabled
     typedef Enable ListQueue;

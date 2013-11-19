@@ -39,7 +39,6 @@ struct TaskExecutor_Stealing<Options, typename Options::Enable> {
         if (!stealorder.steal(this_->getThreadManager(), this_->getId(), task))
             return 0;
 
-        setStolen(task, typename Options::TaskStolenFlag());
         return task;
     }
 };
@@ -98,29 +97,6 @@ public:
         return res;
     }
 };
-
-// ============================================================================
-// Option CurrentTask: Remember current task
-// ============================================================================
-template<typename Options, typename T = typename Options::ExecutorCurrentTask> class TaskExecutor_CurrentTask;
-
-template<typename Options>
-class TaskExecutor_CurrentTask<Options, typename Options::Disable> {
-public:
-    void rememberTask(TaskBase<Options> *) const {}
-};
-
-template<typename Options>
-class TaskExecutor_CurrentTask<Options, typename Options::Enable> {
-private:
-    TaskBase<Options> *currentTask;
-public:
-    TaskExecutor_CurrentTask() : currentTask(0) {}
-
-    void rememberTask(TaskBase<Options> *task) { currentTask = task; }
-    TaskBase<Options> *getCurrentTask() { return currentTask; }
-};
-
 
 // ============================================================================
 // Option Subtasks
@@ -182,8 +158,7 @@ public:
 // ============================================================================
 template<typename Options>
 class TaskExecutorBase
-  : public detail::TaskExecutor_CurrentTask<Options>,
-    public detail::TaskExecutor_GetThreadWorkspace<Options>,
+  : public detail::TaskExecutor_GetThreadWorkspace<Options>,
     public detail::TaskExecutor_PassTaskExecutor<Options>,
     public detail::TaskExecutor_Stealing<Options>,
     public detail::TaskExecutor_Subtasks<Options>,
@@ -314,7 +289,6 @@ public:
         }
 
         // book-keeping
-        detail::TaskExecutor_CurrentTask<Options>::rememberTask(task);
         detail::TaskExecutor_GetThreadWorkspace<Options>::resetWorkspaceIndex();
         applyOldContributionsBeforeRead(task);
 

@@ -106,25 +106,6 @@ struct Task_TaskName<Options, typename Options::Enable> {
 };
 
 // ============================================================================
-// Option StolenFlag
-// ============================================================================
-template<typename Options, typename T = typename Options::TaskStolenFlag> class Task_StolenFlag;
-
-template<typename Options>
-class Task_StolenFlag<Options, typename Options::Disable> {};
-
-template<typename Options>
-class Task_StolenFlag<Options, typename Options::Enable> {
-private:
-    bool stolen;
-
-public:
-    Task_StolenFlag() : stolen(false) {}
-    void setStolen(bool isStolen) { stolen = isStolen; }
-    bool isStolen() const { return stolen; }
-};
-
-// ============================================================================
 // Option ListQueue
 // ============================================================================
 template<typename Options, typename T = typename Options::ListQueue> class Task_ListQueue;
@@ -165,7 +146,6 @@ class TaskBaseDefault
   : public detail::Task_ListQueue<Options>,
     public detail::Task_PassTaskExecutor<Options>,
     public detail::Task_GlobalId<Options>,
-    public detail::Task_StolenFlag<Options>,
     public detail::Task_TaskName<Options>,
     public detail::Task_Priorities<Options>,
     public detail::Task_StealableFlag<Options>,
@@ -193,7 +173,6 @@ public:
     bool areDependenciesSolvedOrNotify() {
         TaskBase<Options> *this_(static_cast<TaskBase<Options> *>(this));
 
-        const size_t numAccess = this->getNumAccess();
         for (; accessIdx < numAccess; ++accessIdx) {
 
             if (!accessPtr[accessIdx].getHandle()->isVersionAvailableOrNotify(this_, accessPtr[accessIdx].requiredVersion)) {
