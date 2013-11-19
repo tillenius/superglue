@@ -75,7 +75,7 @@ class TestSubtasks : public TestCase {
     }
 
     static bool testSubtasksDep(std::string &name) { name = "testSubtasksDep";
-        static volatile int subtask_finished = 0;
+        static volatile unsigned int subtask_finished = 0;
         static RunOrder r;
 
         struct Subtask : public Task<Options> {
