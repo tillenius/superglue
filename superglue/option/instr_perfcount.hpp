@@ -43,7 +43,7 @@ struct PerfTiming {
             end_cpu_clock - cpu_clock,
             end_task_clock - task_clock,
             end_context_switches - context_switches);
-        Log<Options>::addEvent(txt, start, stop);
+        Log<Options>::log(txt, start, stop);
     }
     static void finalize() {}
     static void taskNotRunDeps() {}

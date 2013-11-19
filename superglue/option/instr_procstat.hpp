@@ -36,7 +36,7 @@ struct PerfProcStat {
         close(fd);
         buffer[num_read-1] = '\0';
 
-        Log<Options>::addEvent((detail::GetName::getName(task) + buffer).c_str(), start, stop);
+        Log<Options>::log((detail::GetName::getName(task) + buffer).c_str(), start, stop);
     }
     static void taskNotRunDeps() {}
     static void taskNotRunLock() {}

@@ -83,19 +83,9 @@ template<typename Options, typename T = typename Options::Logging> class Log_Imp
 template<typename Options>
 class Log_Impl<Options, typename Options::Disable> {
 public:
-    static void add(const char *) {}
-    static void addEvent(const char *, Time::TimeUnit start, Time::TimeUnit stop) {}
-    template<typename ParamT>
-    static void add(const char *, ParamT) {}
-
-    static void push() {}
-    static void pop(const char *) {}
-    template<typename ParamT>
-    static void pop(const char *, ParamT) {}
+    static void log(const char *, Time::TimeUnit start, Time::TimeUnit stop) {}
 
     static void dump(const char *, int = 0) {}
-    static void stat(Time::TimeUnit &a, Time::TimeUnit &b) { a = b = 0; }
-
     static void clear() {}
 
     static void registerThread(int id) {}
@@ -120,7 +110,6 @@ public:
     struct ThreadData {
         int id;
         std::vector<Event> events;
-        std::stack<Time::TimeUnit> timestack;
         ThreadData(int id_) : id(id_) {
             events.reserve(65536);
         }
@@ -141,51 +130,9 @@ public:
         return *getLogData().tlsdata.get();
     }
 
-    static void add(const Event &event) {
+    static void log(const char *text, Time::TimeUnit start, Time::TimeUnit stop) {
         ThreadData &data(getThreadData());
-        data.events.push_back(event);
-    }
-
-    static void addEvent(const char *text, Time::TimeUnit start, Time::TimeUnit stop) {
-        add(Event(text, start, stop));
-    }
-
-    static void add(const char *text) {
-        Time::TimeUnit time = Time::getTime();
-        add(Event(text, time, time));
-    }
-
-    template<typename ParamT>
-    static void add(const char *text, ParamT param) {
-        Time::TimeUnit time = Time::getTime();
-        std::stringstream ss;
-        ss << text << "(" << param << ")";
-        add(Event(ss.str(), time, time));
-    }
-
-    static void push() {
-        Time::TimeUnit startTime = Time::getTime();
-        typename Log<Options>::ThreadData &data(Log<Options>::getThreadData());
-        data.timestack.push(startTime);
-    }
-
-    static void pop(const char *text) {
-        Time::TimeUnit endTime = Time::getTime();
-        typename Log<Options>::ThreadData &data(Log<Options>::getThreadData());
-        Time::TimeUnit startTime = data.timestack.top();
-        data.timestack.pop();
-        Log<Options>::add(typename Log<Options>::Event(text, startTime, endTime));
-    }
-
-    template <typename ParamT>
-    static void pop(const char *text, ParamT param) {
-        Time::TimeUnit endTime = Time::getTime();
-        typename Log<Options>::ThreadData &data(Log<Options>::getThreadData());
-        Time::TimeUnit startTime = data.timestack.top();
-        data.timestack.pop();
-        std::stringstream ss;
-        ss << text << "(" << param << ")";
-        Log<Options>::add(typename Log<Options>::Event(ss.str(), startTime, endTime));
+        data.events.push_back(Event(text, start, stop));
     }
 
     static void dump(const char *filename, int node_id = 0) {
@@ -211,37 +158,6 @@ public:
         }
 
         out.close();
-    }
-
-    static void stat(Time::TimeUnit &end, Time::TimeUnit &total) {
-
-        LogData &logdata(getLogData());
-        end = 0;
-        total = 0;
-        Time::TimeUnit minimum = 0;
-        bool gotMinimum = false;
-
-        const size_t numt = logdata.threaddata.size();
-        for (size_t j = 0; j < numt; ++j) {
-            ThreadData &data(logdata.threaddata[j]);
-            const size_t num = data.events.size();
-
-            if (num == 0)
-                continue;
-
-            if (!gotMinimum) {
-                minimum = data.events[0].time_start;
-                gotMinimum = true;
-            }
-            for (size_t i = 0; i < num; ++i) {
-                if (data.events[i].time_start < minimum)
-                    minimum = data.events[i].time_start;
-                if (data.events[i].time_start + data.events[i].time_total > end)
-                    end = data.events[i].time_start + data.events[i].time_total;
-                total += data.events[i].time_total;
-            }
-        }
-        end -= minimum;
     }
 
     static void clear() {

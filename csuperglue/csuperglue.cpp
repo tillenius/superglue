@@ -137,5 +137,5 @@ extern "C" unsigned long long sg_get_time() {
 }
 
 extern "C" void sg_log(const char *name, unsigned long long start, unsigned long long stop) {
-    Log<Options>::addEvent(name, start, stop);
+    Log<Options>::log(name, start, stop);
 }
