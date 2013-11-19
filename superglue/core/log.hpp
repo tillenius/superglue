@@ -193,7 +193,7 @@ public:
         LogData &data(getLogData());
 
         const size_t num = data.threaddata.size();
-        std::vector<std::pair<Event, size_t> > merged;
+        std::vector<std::pair<Event, int> > merged;
 
         for (size_t i = 0; i < num; ++i) {
             for (size_t j = 0; j < data.threaddata[i]->events.size(); ++j)
