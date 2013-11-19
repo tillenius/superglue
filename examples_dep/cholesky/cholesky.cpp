@@ -38,7 +38,12 @@
 #include "hardwaremodel.hpp"
 #include "option/instr_tasktiming.hpp"
 #include <math.h>
+#ifdef USE_MKL
 #include <mkl.h>
+#endif
+#ifdef USE_ACML
+#include <acml.h>
+#endif
 #include <iostream>
 
 double **Adata;
@@ -83,9 +88,14 @@ struct gemm : public Task<Options, 3> {
         double *b(Adata[getAccess(1).getHandle()->geti()*DIM + getAccess(1).getHandle()->getj()]);
         double *c(Adata[getAccess(2).getHandle()->geti()*DIM + getAccess(2).getHandle()->getj()]);
 
+#ifdef USE_MKL
         int nb=NB;
         double DONE=1.0, DMONE=-1.0;
         dgemm("N", "T", &nb, &nb, &nb, &DMONE, a, &nb, b, &nb, &DONE, c, &nb);
+#endif
+#ifdef USE_ACML
+        dgemm('N', 'T', NB, NB, NB, -1.0, a, NB, b, NB, 1.0, c, NB);
+#endif
     }
     std::string getName() { return "gemm"; }
 };
@@ -99,9 +109,14 @@ struct syrk : public Task<Options, 2> {
 
         double *a(Adata[getAccess(0).getHandle()->geti()*DIM + getAccess(0).getHandle()->getj()]);
         double *c(Adata[getAccess(1).getHandle()->geti()*DIM + getAccess(1).getHandle()->getj()]);
-        double DONE=1.0, DMONE=-1.0;
+#ifdef USE_MKL
         int nb = NB;
+        double DONE=1.0, DMONE=-1.0;
         dsyrk("L", "N", &nb, &nb, &DMONE, a, &nb, &DONE, c, &nb);
+#endif
+#ifdef USE_ACML
+        dsyrk('L', 'N', NB, NB, -1.0, a, NB, 1.0, c, NB);
+#endif
     }
     std::string getName() { return "syrk"; }
 };
@@ -113,8 +128,13 @@ struct potrf : public Task<Options, 1> {
     void run() {
         double *a(Adata[getAccess(0).getHandle()->geti()*DIM + getAccess(0).getHandle()->getj()]);
         int info = 0;
+#ifdef USE_MKL
         int nb = NB;
         dpotrf("L", &nb, a, &nb, &info);
+#endif
+#ifdef USE_ACML
+        dpotrf('L', NB, a, NB, &info);
+#endif
     }
     std::string getName() { return "potrf"; }
 };
@@ -127,9 +147,14 @@ struct trsm : public Task<Options, 2> {
     void run() {
         double *a(Adata[getAccess(0).getHandle()->geti()*DIM + getAccess(0).getHandle()->getj()]);
         double *b(Adata[getAccess(1).getHandle()->geti()*DIM + getAccess(1).getHandle()->getj()]);
+#ifdef USE_MKL
         double DONE=1.0;
         int nb = NB;
         dtrsm("R", "L", "T", "N", &nb, &nb, &DONE, a, &nb, b, &nb);
+#endif
+#ifdef USE_ACML
+        dtrsm('R', 'L', 'T', 'N', NB, NB, 1.0, a, NB, b, NB);
+#endif
     }
     std::string getName() { return "trsm"; }
 };
@@ -226,6 +251,7 @@ int main(int argc, char *argv[]) {
 
     Time::TimeUnit t1, t2;
 
+#ifdef USE_MKL
     mkl_set_num_threads(num_cores);
 {
     mkl_set_dynamic(0);
@@ -233,6 +259,13 @@ int main(int argc, char *argv[]) {
     dpotrf("L", &nb, a, &nb, &info);
     t2 = Time::getTime();
 }
+#endif
+#ifdef USE_ACML
+    t1 = Time::getTime();
+    dpotrf('L', NB, a, NB, &info);
+    t2 = Time::getTime();
+#endif
+
     std::cout << NB << " " << DIM << " " << num_cores << " " << t2-t1 << std::endl;
     return 0;
 #endif
@@ -246,7 +279,9 @@ int main(int argc, char *argv[]) {
 
     std::cerr<<"run " << num_workers+1 << " NB=" << NB << " DIM=" << DIM <<  std::endl;
 
+#ifdef USE_MKL
     mkl_set_num_threads(1);
+#endif
 
     cholesky(num_workers, DIM);
 
