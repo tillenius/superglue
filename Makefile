@@ -16,7 +16,14 @@ examples:
 tools:
 	( cd tools ; make )
 
+csuperglue:
+	$(CXX) $(FLAGS) -I csuperglue/ csuperglue/csuperglue.cpp -c -o bin/csuperglue.o
+	$(CXX) $(FLAGS) -DSG_LOGGING -I csuperglue/ csuperglue/csuperglue.cpp -c -o bin/csupergluelog.o
+
+csupergluetest:
+	( cd test/csuperglue ; make )
+
 clean:
 	rm -f ./bin/* ./examples/bin/*
 
-.PHONY: tests unittest examples tools clean
+.PHONY: tests unittest examples tools csuperglue clean
