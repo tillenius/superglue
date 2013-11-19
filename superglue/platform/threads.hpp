@@ -71,7 +71,7 @@ struct ThreadImplAux {
             ::exit(1);
         }
     }
-    static int getNumCPUs() { return sysconf(_SC_NPROCESSORS_ONLN); }
+    static int getNumCPUs() { return (int) sysconf(_SC_NPROCESSORS_ONLN); }
 };
 #elif __APPLE__
 struct ThreadImplAux {

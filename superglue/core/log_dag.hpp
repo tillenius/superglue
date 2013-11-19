@@ -24,7 +24,7 @@ struct Node {
     Time::TimeUnit time_stamp;
     Node(const std::string &name_,
          const std::string &style_,
-         size_t type_)
+         int type_)
     : name(name_), style(style_), type(type_) {
         time_stamp = Time::getTime();
     }

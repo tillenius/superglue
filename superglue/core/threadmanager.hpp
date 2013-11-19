@@ -87,7 +87,7 @@ class ThreadManagerBase
     typedef typename detail::CheckLockableRequired<Options>::type ACCESSINFOTYPE;
 
 private:
-    const size_t numWorkers;
+    const int numWorkers;
 
     ThreadManagerBase(const ThreadManagerBase &);
     ThreadManagerBase &operator=(const ThreadManagerBase &);
@@ -149,7 +149,7 @@ public:
         startBarrier = new Barrier(numWorkers+1);
         Log<Options>::init();
         Log<Options>::registerThread(0); // register main thread
-        for (size_t i = 0; i < numWorkers; ++i) {
+        for (int i = 0; i < numWorkers; ++i) {
             WorkerThreadStarter<Options> *wts =
                 new WorkerThreadStarter<Options>(i+1, *this_);
             wts->start();
@@ -169,14 +169,14 @@ public:
         assert(detail::ThreadManager_PauseExecution<Options>::mayExecute());
         barrier();
 
-        for (size_t i = 0; i < numWorkers; ++i)
+        for (int i = 0; i < numWorkers; ++i)
             threads[i]->setTerminateFlag();
 
-        for (size_t i = 0; i < numWorkers; ++i)
+        for (int i = 0; i < numWorkers; ++i)
             threads[i]->join();
 
         delete startBarrier;
-        for (size_t i = 0; i < numWorkers; ++i)
+        for (int i = 0; i < numWorkers; ++i)
             delete threads[i];
 
         delete[] threads;
@@ -184,12 +184,12 @@ public:
         Options::TaskExecutorInstrumentation::finalize();
     }
 
-    size_t getNumWorkers() const { return numWorkers; }
+    int getNumWorkers() const { return numWorkers; }
     TaskQueue<Options> **getTaskQueues() const { return taskQueues; }
-    size_t getNumQueues() const { return numWorkers+1; }
-    WorkerThread<Options> *getWorker(size_t i) { return threads[i]; }
+    int getNumQueues() const { return numWorkers+1; }
+    WorkerThread<Options> *getWorker(int i) { return threads[i]; }
 
-    static size_t decideNumWorkers() {
+    static int decideNumWorkers() {
         const char *var = getenv("OMP_NUM_THREADS");
         if (var != NULL) {
             const int OMP_NUM_THREADS(atoi(var));
