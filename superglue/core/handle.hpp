@@ -7,6 +7,7 @@
 #include "platform/spinlock.hpp"
 #include "platform/atomic.hpp"
 #include <cassert>
+#include <limits>
 
 template<typename Options> class HandleBase;
 template<typename Options> class TaskBase;
@@ -272,13 +273,13 @@ public:
     bool isVersionAvailableOrNotify(TaskBase<Options> *task, version_t requiredVersion_) {
 
         // check if required version is available
-        if ( (int) (version - requiredVersion_) >= 0)
+        if ( (version_t) (version - requiredVersion_) < std::numeric_limits<version_t>::max()/2)
             return true;
 
         // the version may become available here; lock and check again
 
         VersionQueueExclusive<Options> queue(versionQueue);
-        if ( (int) (version - requiredVersion_) >= 0)
+        if ( (version_t) (version - requiredVersion_) < std::numeric_limits<version_t>::max()/2)
             return true;
 
         queue.addVersionListener(task, requiredVersion_);

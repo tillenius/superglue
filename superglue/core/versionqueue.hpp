@@ -3,6 +3,7 @@
 
 #include "platform/spinlock.hpp"
 #include "platform/atomic.hpp"
+#include <limits>
 
 template<typename Options>
 class VersionQueue {
@@ -47,7 +48,8 @@ public:
                     return;
 
                 // return if next version listener is for future version
-                if (versionListeners.first_key() > version)
+
+                if ((version_t) (version - versionListeners.first_key()) >= std::numeric_limits<version_t>::max()/2)
                     return;
 
                 list = versionListeners.pop_front();
@@ -63,7 +65,7 @@ public:
             checkDependencies(list, typename Options::DependencyChecking());
 
             if (!list.empty()) {
-                taskExecutor.getTaskQueue().push_front_list(list);
+                taskExecutor.getTaskQueue().push_front_list(list); // destroys list
                 taskExecutor.getThreadManager().signalNewWork();
             }
         }
