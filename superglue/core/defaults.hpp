@@ -90,8 +90,15 @@ struct DefaultOptions {
 
     // Thread affinity
     struct DefaultThreadAffinity {
-        static void set(int id) {
-            ThreadUtil::setAffinity(Options::HardwareModel::cpumap(id));
+        static void pin_main_thread() {
+            affinity_cpu_set cpu_set;
+            cpu_set.set(HardwareModel::cpumap(0));
+            ThreadUtil::setAffinity(cpu_set);
+        }
+        static void pin_workerthread(int id) {
+            affinity_cpu_set cpu_set;
+            cpu_set.set(HardwareModel::cpumap(id));
+            ThreadUtil::setAffinity(cpu_set);
         }
     };
     typedef DefaultThreadAffinity ThreadAffinity;

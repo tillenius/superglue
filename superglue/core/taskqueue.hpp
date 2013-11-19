@@ -6,6 +6,7 @@
 #include "core/log.hpp"
 
 #include <stdint.h>
+#include <iostream>
 
 template<typename, typename> class Log_DumpState;
 template<typename Options> class TaskBase;

@@ -21,6 +21,8 @@ int main() {
     thr.join();
     assert(ok);
 
-    ThreadUtil::setAffinity(0);
+    affinity_cpu_set cpu_set;
+    cpu_set.set(0);
+    ThreadUtil::setAffinity(cpu_set);
     return 0;
 }

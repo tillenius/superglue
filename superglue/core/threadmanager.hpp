@@ -122,7 +122,7 @@ public:
 
         void run() {
             // pin thread to specific cpu core
-            Options::ThreadAffinity::set(id);
+            Options::ThreadAffinity::pin_workerthread(id);
 
             // allocate Worker on thread
             WorkerThread<Ops> *wt = new WorkerThread<Ops>(id, tm);
@@ -141,7 +141,7 @@ public:
         assert(numWorkers_ == -1 || numWorkers_ >= 0);
 
         Options::HardwareModel::init();
-        Options::ThreadAffinity::set(0);
+        Options::ThreadAffinity::pin_main_thread();
         taskQueues = new TaskQueue<Options> *[getNumQueues()];
         taskQueues[0] = &barrierProtocol.getTaskQueue();
 
