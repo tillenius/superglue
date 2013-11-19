@@ -25,6 +25,7 @@ template<> struct AtomicImplAux<4> {
     template<typename T> static void decrease(T *ptr) { atomic_dec_32(ptr); }
     template<typename T> static T increase_nv(T *ptr) { return atomic_inc_32_nv(ptr); }
     template<typename T> static T decrease_nv(T *ptr) { return atomic_dec_32_nv(ptr); }
+    template<typename T> static T add_nv(T *ptr, T val) { return atomic_add_32_nv(ptr, val); }
     template<typename T> static T cas(volatile T *ptr, T oldval, T newval) { return atomic_cas_32(ptr, oldval, newval); }
 };
 
@@ -34,6 +35,7 @@ template<> struct AtomicImplAux<8> {
     template<typename T> static void decrease(T *ptr) { atomic_dec_64(ptr); }
     template<typename T> static T increase_nv(T *ptr) { return atomic_inc_64_nv(ptr); }
     template<typename T> static T decrease_nv(T *ptr) { return atomic_dec_64_nv(ptr); }
+    template<typename T> static T add_nv(T *ptr, T val) { return atomic_add_64_nv(ptr, val); }
     template<typename T> static T cas(volatile T *ptr, T oldval, T newval) { return atomic_cas_64(ptr, oldval, newval); }
 };
 #endif
@@ -43,8 +45,9 @@ struct AtomicImpl {
     template<typename T> static void decrease(T *ptr) { AtomicImplAux<sizeof(T)>::decrease(ptr); }
     template<typename T> static T increase_nv(T *ptr) { return AtomicImplAux<sizeof(T)>::increase_nv(ptr); }
     template<typename T> static T decrease_nv(T *ptr) { return AtomicImplAux<sizeof(T)>::decrease_nv(ptr); }
+    template<typename T> static T add_nv(T *ptr, T val) { return AtomicImplAux<sizeof(T)>::add_nv(ptr, val); }
     template<typename T> static T cas(volatile T *ptr, T oldval, T newval) { return AtomicImplAux<sizeof(T)>::cas(ptr, oldval, newval); }
-    
+
     static void memory_fence_enter() {
         // Any store preceding membar_enter() will reach global visibility
         // before all loads and stores following it.
@@ -99,6 +102,7 @@ struct AtomicImpl {
 
     static void yield() { sched_yield(); }
     static void rep_nop() { asm ("rep;nop": : :"memory"); }
+    static void compiler_fence() { asm ("":::"memory"); }
 };
 #endif // __SUNPRO_CC
 

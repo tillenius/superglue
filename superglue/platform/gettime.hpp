@@ -75,6 +75,9 @@ static inline TimeUnit getTime() {
     return (tv.tv_sec*(unsigned long long )1000000+tv.tv_usec);
 }
 
+static inline TimeUnit getTimeStart() { return getTime(); }
+static inline TimeUnit getTimeStop() { return getTime(); }
+
 #endif
 
 } // namespace Time
