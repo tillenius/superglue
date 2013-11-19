@@ -7,6 +7,7 @@
 class SpinLockAtomic {
 public:
     volatile unsigned int v_;
+    char padding[64-sizeof(v_)];
 
     SpinLockAtomic(const SpinLockAtomic &);
     const SpinLockAtomic &operator=(const SpinLockAtomic &);

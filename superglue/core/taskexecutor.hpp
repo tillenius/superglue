@@ -195,9 +195,9 @@ class TaskExecutorBase
 public:
     const int id;
     ThreadManager<Options> &tm;
-    char padding1[64];
+    char padding1[Options::HardwareModel::CACHE_LINE_SIZE];
     TaskQueue<Options> readyList;
-    char padding2[64];
+    char padding2[Options::HardwareModel::CACHE_LINE_SIZE];
 
     // Called from this thread only
     TaskBase<Options> *getTaskInternal() {

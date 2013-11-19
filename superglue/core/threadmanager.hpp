@@ -32,9 +32,9 @@ struct ThreadManager_PauseExecution<Options, typename Options::Disable> {
 
 template<typename Options>
 struct ThreadManager_PauseExecution<Options, typename Options::Enable> {
-    char dummy[64];
+    char dummy[Options::HardwareModel::CACHE_LINE_SIZE];
     bool flag;
-    char dummy2[64];
+    char dummy2[Options::HardwareModel::CACHE_LINE_SIZE];
     ThreadManager_PauseExecution() : flag(false) {}
     void setMayExecute(bool flag_) { flag = flag_; }
     bool mayExecute() const { return flag; }
@@ -94,7 +94,7 @@ private:
 
 public:
     BarrierProtocol<Options> barrierProtocol;
-    char padding[64];
+    char padding[Options::HardwareModel::CACHE_LINE_SIZE];
     Barrier *startBarrier; // only used during thread creation
     WorkerThread<Options> **threads;
     TaskQueue<Options> **taskQueues;

@@ -12,9 +12,9 @@ class BarrierProtocol
   : public TaskExecutor<Options>
 {
 private:
-    char padding1[64];
+    char padding1[Options::HardwareModel::CACHE_LINE_SIZE];
     size_t barrierCounter; // written by everybody, read by main thread
-    char padding2[64];
+    char padding2[Options::HardwareModel::CACHE_LINE_SIZE];
     int state;             // written by anyone, 3 times per try, read by everybody
     int abort;             // written by anyone, 1 time per try, read by main thread
 
