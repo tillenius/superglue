@@ -37,6 +37,11 @@
 #include "superglue.hpp"
 #include "hardwaremodel.hpp"
 #include "option/instr_tasktiming.hpp"
+
+#ifdef USE_PRIO
+#include "option/taskqueue_prio.hpp"
+#endif
+
 #include <math.h>
 #ifdef USE_MKL
 #include <mkl.h>
@@ -71,6 +76,9 @@ struct Options : public DefaultOptions<Options> {
     typedef Enable Logging;
     typedef TaskExecutorTiming<Options> TaskExecutorInstrumentation;
     typedef Enable TaskName;
+#ifdef USE_PRIO
+    typedef TaskQueuePrioUnsafe<Options> TaskQueueUnsafeType;
+#endif
 };
 
 // ==========================================================================
@@ -104,6 +112,11 @@ struct syrk : public Task<Options, 2> {
     syrk(Handle<Options> &h1, Handle<Options> &h2) {
         registerAccess(ReadWriteAdd::read, &h1);
         registerAccess(ReadWriteAdd::write, &h2);
+
+#ifdef USE_PRIO
+	is_prioritized = true;
+#endif
+
     }
     void run() {
 
@@ -124,6 +137,11 @@ struct syrk : public Task<Options, 2> {
 struct potrf : public Task<Options, 1> {
     potrf(Handle<Options> &h1) {
         registerAccess(ReadWriteAdd::write, &h1);
+
+#ifdef USE_PRIO
+	is_prioritized = true;
+#endif
+
     }
     void run() {
         double *a(Adata[getAccess(0).getHandle()->geti()*DIM + getAccess(0).getHandle()->getj()]);
@@ -143,6 +161,11 @@ struct trsm : public Task<Options, 2> {
     trsm(Handle<Options> &h1, Handle<Options> &h2) {
         registerAccess(ReadWriteAdd::read, &h1);
         registerAccess(ReadWriteAdd::write, &h2);
+
+#ifdef USE_PRIO
+        is_prioritized = true;
+#endif
+
     }
     void run() {
         double *a(Adata[getAccess(0).getHandle()->geti()*DIM + getAccess(0).getHandle()->getj()]);
