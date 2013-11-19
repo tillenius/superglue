@@ -3,6 +3,7 @@
 
 #include "core/types.hpp"
 #include "platform/spinlock.hpp"
+#include "core/taskqueueutil.hpp"
 #include "core/log.hpp"
 
 #include <stdint.h>
@@ -11,41 +12,6 @@
 template<typename, typename> class Log_DumpState;
 template<typename Options> class TaskBase;
 template<typename Options> class Log;
-
-template<typename Options>
-class TaskQueueUnsafe<Options, typename Options::Disable>
- : public Types<Options>::taskdeque_t {
-    typedef typename Types<Options>::taskdeque_t parent;
-
-public:
-    bool pop_front(TaskBase<Options> * &elem) {
-        if (parent::empty())
-            return false;
-
-        Options::Scheduler::getTask(*this, elem);
-
-        return true;
-    }
-
-    bool pop_back(TaskBase<Options> * &elem) {
-        if (parent::empty())
-            return false;
-        return Options::Scheduler::stealTask(*this, elem);
-    }
-
-    void push_front_list(TaskQueueUnsafe<Options> &rhs) {
-        parent::insert(parent::begin(), rhs.begin(), rhs.end());
-    }
-
-    bool empty() {
-        return parent::empty();
-    }
-
-    template<typename UnaryPredicate>
-    void erase_if(UnaryPredicate pred) {
-        remove_if(parent::begin(), parent::end(), pred);
-    }
-};
 
 // TaskQueueUnsafe is a (non-thread-safe) doubly linked list
 // (or "xor linked list", see http://en.wikipedia.org/wiki/XOR_linked_list)
@@ -58,7 +24,7 @@ public:
 //  A    0^B   A^B   B^0    C
 
 template<typename Options>
-class TaskQueueUnsafe<Options, typename Options::Enable> {
+class TaskQueueDefaultUnsafe {
 protected:
     TaskBase<Options> *first;
     TaskBase<Options> *last;
@@ -66,7 +32,14 @@ protected:
     template<typename, typename> friend struct Log_DumpState;
 
 public:
-    TaskQueueUnsafe() : first(0), last(0) {}
+    struct ElementData {
+        uintptr_t nextPrev;
+        ElementData() : nextPrev(0) {}
+    };
+
+    typedef TaskBase<Options> value_type;
+
+    TaskQueueDefaultUnsafe() : first(0), last(0) {}
 
     void push_back(TaskBase<Options> *elem) {
         if (last == 0) {
@@ -93,7 +66,9 @@ public:
     }
 
     // takes ownership of input list
-    void push_front_list(TaskQueueUnsafe<Options> &rhs) {
+    void push_front_list(TaskQueueDefaultUnsafe &rhs) {
+        if (rhs.first == 0)
+            return;
         if (first == 0) {
             first = rhs.first;
             last = rhs.last;
@@ -141,7 +116,7 @@ public:
         TaskBase<Options> *next;
 
         for (;curr != 0;) {
-            visitor.visit(curr);
+            visitor(curr);
             next = reinterpret_cast<TaskBase<Options> *>(
                 reinterpret_cast<uintptr_t>(prev) ^ curr->nextPrev);
             prev = curr;
@@ -217,7 +192,7 @@ public:
 
     bool empty() { return first == 0; }
 
-    void swap(TaskQueueUnsafe &rhs) {
+    void swap(TaskQueueDefaultUnsafe<Options> &rhs) {
         std::swap(first, rhs.first);
         std::swap(last, rhs.last);
     }
@@ -241,87 +216,6 @@ public:
             curr = next;
         }
     }
-};
-
-template<typename Options>
-class TaskQueue : public TaskQueueUnsafe<Options> {
-    template<typename> friend class TaskQueueExclusive;
-private:
-    SpinLock spinlock;
-
-    TaskQueue(const TaskQueue &);
-    const TaskQueue &operator=(const TaskQueue &);
-
-    template<typename, typename> friend struct Log_DumpState;
-
-    SpinLock &getLock() { return spinlock; }
-    TaskQueueUnsafe<Options> &getUnsafeQueue() { return *this; }
-
-public:
-    TaskQueue() {}
-
-    void push_back(TaskBase<Options> *elem) {
-        SpinLockScoped lock(spinlock);
-        TaskQueueUnsafe<Options>::push_back(elem);
-    }
-
-    void push_front(TaskBase<Options> *elem) {
-        SpinLockScoped lock(spinlock);
-        TaskQueueUnsafe<Options>::push_front(elem);
-    }
-
-    // takes ownership of input list
-    void push_front_list(TaskQueueUnsafe<Options> &list) {
-        SpinLockScoped lock(spinlock);
-        TaskQueueUnsafe<Options>::push_front_list(list);
-    }
-
-    bool pop_front(TaskBase<Options> * &elem) {
-        SpinLockScoped lock(spinlock);
-        return TaskQueueUnsafe<Options>::pop_front(elem);
-    }
-
-    bool pop_back(TaskBase<Options> * &elem) {
-        if (TaskQueueUnsafe<Options>::empty())
-            return false;
-        SpinLockScoped lock(spinlock);
-        return TaskQueueUnsafe<Options>::pop_back(elem);
-    }
-
-    bool try_steal(TaskBase<Options> * &elem) {
-        SpinLockTryLock lock(spinlock);
-        if (!lock.success)
-            return false;
-        return TaskQueueUnsafe<Options>::pop_back(elem);
-    }
-
-    void swap(TaskQueueUnsafe<Options> &rhs) {
-        SpinLockScoped lock(spinlock);
-        TaskQueueUnsafe<Options>::swap(rhs);
-    }
-
-    bool empty_safe() { 
-        SpinLockScoped lock(spinlock);
-        return TaskQueueUnsafe<Options>::empty();
-    }
-
-};
-
-template<typename Options>
-class TaskQueueExclusive {
-private:
-    SpinLockScoped lock;
-    TaskQueueUnsafe<Options> &queue;
-
-public:
-    TaskQueueExclusive(TaskQueue<Options> &tq) : lock(tq.getLock()), queue(tq.getUnsafeQueue()) {}
-
-    void push_back(TaskBase<Options> *elem) { queue.push_back(elem); }
-    void push_front(TaskBase<Options> *elem) { queue.push_front(elem); }
-    void push_front_list(TaskQueueUnsafe<Options> &list) { queue.push_front_list(list); }
-    bool get(TaskBase<Options> * &elem) { return queue.get(elem); }
-    bool steal(TaskBase<Options> * &elem) { return queue.steal(elem); }
-    void swap(TaskQueueUnsafe<Options> &rhs) { queue.swap(rhs); }
 };
 
 #endif // __TASKQUEUE_HPP__

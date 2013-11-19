@@ -6,7 +6,6 @@
 #include <deque>
 
 template<typename Options> class TaskBase;
-template<typename Options, typename T = typename Options::ListQueue> class TaskQueueUnsafe;
 
 template<typename Options>
 struct Types {
@@ -20,8 +19,9 @@ struct Types {
     };
 
     typedef typename Options::version_t version_t;
+    typedef typename Options::TaskQueueUnsafeType TaskQueueUnsafe;
 
-    typedef ordered_vec_t< typename deque_t< elem_t<version_t, TaskQueueUnsafe<Options> > >::type, version_t, TaskQueueUnsafe<Options> > versionmap_t;
+    typedef ordered_vec_t< typename deque_t< elem_t<version_t, TaskQueueUnsafe> >::type, version_t, TaskQueueUnsafe> versionmap_t;
     typedef typename deque_t<TaskBase<Options> *>::type taskdeque_t;
 };
 

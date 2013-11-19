@@ -50,7 +50,7 @@ public:
         // New version, but not at the end.
         // An expensive insert is done here, but it should be a rare case since
         // requests of versions are expected (but not required) to come in order.
-        return  array.insert(iter, element_t(key))->value;
+        return array.insert(iter, element_t(key))->value;
     }
 
     bool empty() const { return array.empty(); }

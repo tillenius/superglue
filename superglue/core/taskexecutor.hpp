@@ -2,8 +2,8 @@
 #define __TASKEXECUTOR_HPP__
 
 #include "core/log_dag.hpp"
+#include "core/taskqueueutil.hpp"
 
-template<typename Options> class TaskQueue;
 template<typename Options> class ThreadManager;
 template<typename Options> class TaskExecutor;
 
@@ -123,7 +123,7 @@ public:
         else
             Atomic::increase(&parent->subtask_count);
         task->parent = parent;
-        this_->submit(task);
+        this_->submit_front(task);
     }
 
     void finished(TaskBase<Options> *task) {
@@ -166,12 +166,13 @@ class TaskExecutorBase
 {
     template<typename, typename> friend struct TaskExecutor_Stealing;
     template<typename, typename> friend struct TaskExecutor_PassThreadId;
+    typedef TaskQueueSafe<typename Options::TaskQueueUnsafeType> TaskQueue;
 
 public:
     const int id;
     ThreadManager<Options> &tm;
     char padding1[Options::HardwareModel::CACHE_LINE_SIZE];
-    TaskQueue<Options> readyList;
+    TaskQueue readyList;
     char padding2[Options::HardwareModel::CACHE_LINE_SIZE];
 
     // Called from this thread only
@@ -262,6 +263,14 @@ public:
         Options::FreeTask::free(task);
     }
 
+    void submit_front(TaskBase<Options> *task) {
+        if (!dependenciesReadyAtSubmit(task, typename Options::DependencyChecking()))
+            return;
+
+        readyList.push_front(task);
+        tm.signalNewWork();
+    }
+
 public:
 
     TaskExecutorBase(int id_, ThreadManager<Options> &tm_)
@@ -317,7 +326,7 @@ public:
         tm.signalNewWork();
     }
 
-    TaskQueue<Options> &getTaskQueue() { return readyList; }
+    TaskQueue &getTaskQueue() { return readyList; }
     int getId() const { return id; }
     ThreadManager<Options> &getThreadManager() { return tm; }
 };

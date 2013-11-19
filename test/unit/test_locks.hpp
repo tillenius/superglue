@@ -10,17 +10,9 @@ class TestLocks : public TestCase {
     struct OpLockable : public DefaultOptions<OpLockable> {
         typedef ReadWriteAdd AccessInfoType;
         typedef Enable Lockable;
-        typedef Enable ListQueue;
-    };
-
-    struct OpLockableVec : public DefaultOptions<OpLockableVec> {
-        typedef ReadWriteAdd AccessInfoType;
-        typedef Enable Lockable;
-        typedef Disable ListQueue;
     };
 
     static const char *getName(OpLockable) { return "testLockable"; }
-    static const char *getName(OpLockableVec) { return "testLockableVec"; }
 
     template<typename Op>
     class MyTask : public Task<Op, 1> {
@@ -55,8 +47,7 @@ public:
 
     testfunction *get(size_t &numTests) {
         static testfunction tests[] = {
-                testLockable<OpLockable>,
-                testLockable<OpLockableVec>,
+                testLockable<OpLockable>
         };
         numTests = sizeof(tests)/sizeof(testfunction);
         return tests;

@@ -14,7 +14,6 @@
 #include <cassert>
 
 template <typename Options> class TaskBase;
-template <typename Options> class TaskQueue;
 template <typename Options> class WorkerThread;
 template <typename Options> class ThreadManager;
 
@@ -85,6 +84,7 @@ class ThreadManagerBase
     template<typename, typename> friend struct ThreadManager_GetThreadWorkspace;
     template<typename, typename> friend struct ThreadManager_PauseExecution;
     typedef typename detail::CheckLockableRequired<Options>::type ACCESSINFOTYPE;
+    typedef TaskQueueSafe<typename Options::TaskQueueUnsafeType> TaskQueue;
 
 private:
     const int numWorkers;
@@ -97,7 +97,7 @@ public:
     char padding[Options::HardwareModel::CACHE_LINE_SIZE];
     Barrier *startBarrier; // only used during thread creation
     WorkerThread<Options> **threads;
-    TaskQueue<Options> **taskQueues;
+    TaskQueue **taskQueues;
 
 
     // called from thread starter. Can be called by many threads concurrently
@@ -142,7 +142,7 @@ public:
 
         Options::HardwareModel::init();
         Options::ThreadAffinity::pin_main_thread();
-        taskQueues = new TaskQueue<Options> *[getNumQueues()];
+        taskQueues = new TaskQueue *[getNumQueues()];
         taskQueues[0] = &barrierProtocol.getTaskQueue();
 
         threads = new WorkerThread<Options>*[numWorkers];
@@ -185,7 +185,7 @@ public:
     }
 
     int getNumWorkers() const { return numWorkers; }
-    TaskQueue<Options> **getTaskQueues() const { return taskQueues; }
+    TaskQueue **getTaskQueues() const { return taskQueues; }
     int getNumQueues() const { return numWorkers+1; }
     WorkerThread<Options> *getWorker(int i) { return threads[i]; }
 

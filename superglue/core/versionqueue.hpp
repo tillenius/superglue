@@ -10,6 +10,7 @@ class VersionQueue {
 private:
     typedef typename Types<Options>::versionmap_t versionmap_t;
     typedef typename Options::version_t version_t;
+    typedef typename Options::TaskQueueUnsafeType TaskQueueUnsafe;
 
     // lock that must be held during usage of the listener list, and when unlocking
     SpinLock versionListenerSpinLock;
@@ -22,8 +23,8 @@ private:
         }
     };
 
-    static void checkDependencies(TaskQueueUnsafe<Options> &list, typename Options::LazyDependencyChecking) {}
-    static void checkDependencies(TaskQueueUnsafe<Options> &list, typename Options::EagerDependencyChecking) {
+    static void checkDependencies(TaskQueueUnsafe &list, typename Options::LazyDependencyChecking) {}
+    static void checkDependencies(TaskQueueUnsafe &list, typename Options::EagerDependencyChecking) {
         list.erase_if(DependenciesNotSolvedPredicate());
     }
 
@@ -37,7 +38,7 @@ public:
     void notifyVersionListeners(TaskExecutor<Options> &taskExecutor, version_t version) {
 
         for (;;) {
-            TaskQueueUnsafe<Options> list;
+            TaskQueueUnsafe list;
             {
                 SpinLockScoped verListenerLock(versionListenerSpinLock);
 

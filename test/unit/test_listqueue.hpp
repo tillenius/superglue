@@ -6,7 +6,6 @@
 class TestListQueue : public TestCase {
     struct OpPaused : public DefaultOptions<OpPaused> {
         typedef Enable PauseExecution;
-        typedef Enable ListQueue;
         typedef ReadWrite AccessInfoType;
         typedef Disable Locking;
     };

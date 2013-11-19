@@ -16,7 +16,8 @@ public:
 #include "unit/test_access.hpp"
 #include "unit/test_schedver.hpp"
 #include "unit/test_taskqueue.hpp"
-#include "unit/test_taskqueuelist.hpp"
+#include "unit/test_taskqueuedeque.hpp"
+#include "unit/test_taskqueueprio.hpp"
 #include "unit/test_tasks.hpp"
 #include "unit/test_locks.hpp"
 #include "unit/test_listqueue.hpp"
@@ -32,7 +33,8 @@ int main(int argc, char *argv[]) {
         new TestAccess(),
         new TestSchedulerVer(),
         new TestTaskQueue(),
-        new TestTaskQueueList(),
+        new TestTaskQueueDeque(),
+        new TestTaskQueuePrio(),
         new TestTasks(),
         new TestLocks(),
         new TestListQueue(),

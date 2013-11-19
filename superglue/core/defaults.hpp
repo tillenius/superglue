@@ -2,12 +2,12 @@
 #define __DEFAULTS_HPP__
 
 #include "core/accesstypes.hpp"
-#include "core/sched_default.hpp"
 #include "core/hwmodel_default.hpp"
 #include "core/stealorder.hpp"
 
 template<typename Options> class TaskExecutorBase;
 template<typename Options> class ThreadManagerBase;
+template<typename Options> class TaskQueueUnsafe;
 
 template <typename Options>
 struct DefaultOptions {
@@ -18,7 +18,6 @@ struct DefaultOptions {
     template<typename T2> struct Alloc {
         typedef std::allocator<T2> type;
     };
-    typedef DefaultScheduler<Options> Scheduler;
     typedef DefaultStealOrder<Options> StealOrder;
     typedef ReadWriteAdd AccessInfoType;
     typedef unsigned int version_t;
@@ -34,6 +33,7 @@ struct DefaultOptions {
     };
     typedef TaskExecutorBase<Options> TaskExecutorType;
     typedef ThreadManagerBase<Options> ThreadManagerType;
+    typedef TaskQueueDefaultUnsafe<Options> TaskQueueUnsafeType;
 
     // Features
     typedef Disable TaskName;            // tasks must implement a getName() method

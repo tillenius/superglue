@@ -1,12 +1,15 @@
-#ifndef __TEST_TASKQUEUE_HPP_
-#define __TEST_TASKQUEUE_HPP_
+#ifndef __TEST_DEQUETASKQUEUE_HPP_
+#define __TEST_DEQUETASKQUEUE_HPP_
 
+#include "option/taskqueue_deque.hpp"
 #include "test_taskqueue_impl.hpp"
 
 #include <string>
 
-class TestTaskQueue : public TestCase {
-    struct OpDefault : public DefaultOptions<OpDefault> {};
+class TestTaskQueueDeque : public TestCase {
+    struct OpDefault : public DefaultOptions<OpDefault> {
+        typedef TaskQueueDequeUnsafe<OpDefault> TaskQueueUnsafeType;
+    };
 
     static bool testTaskQueue(std::string &name) {
         return TaskQueueTest<OpDefault>::testTaskQueueImpl(name);
@@ -18,7 +21,7 @@ class TestTaskQueue : public TestCase {
 
 public:
 
-    std::string getName() { return "TestTaskQueue"; }
+    std::string getName() { return "TestTaskQueueDeque"; }
 
     testfunction *get(size_t &numTests) {
         static testfunction tests[] = {
@@ -29,4 +32,4 @@ public:
     }
 };
 
-#endif // __TEST_TASKQUEUE_HPP_
+#endif // __TEST_DEQUETASKQUEUE_HPP_

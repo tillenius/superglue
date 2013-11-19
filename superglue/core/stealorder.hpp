@@ -6,11 +6,11 @@
 
 template<typename Options> class ThreadManager;
 template<typename Options> class TaskBase;
-template<typename Options> class TaskQueue;
 
 // Start from random queue and search upwards
 template<typename Options>
 class DefaultStealOrder {
+    typedef TaskQueueSafe<typename Options::TaskQueueUnsafeType> TaskQueue;
 private:
     size_t seed;
 
@@ -21,11 +21,10 @@ public:
     }
 
     bool steal(ThreadManager<Options> &tm, size_t id, TaskBase<Options> *&dest) {
-        TaskQueue<Options> **taskQueues(tm.getTaskQueues());
+        TaskQueue **taskQueues(tm.getTaskQueues());
         const size_t numQueues = tm.getNumQueues();
         seed = seed * 1664525 + 1013904223;
-        const size_t mask((numQueues-1));
-        const size_t random(seed & mask);
+        const size_t random(seed % numQueues);
 
         for (size_t i = random; i < numQueues; ++i) {
             if (i == id)

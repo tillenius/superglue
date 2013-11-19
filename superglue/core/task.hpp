@@ -106,21 +106,6 @@ struct Task_TaskName<Options, typename Options::Enable> {
 };
 
 // ============================================================================
-// Option ListQueue
-// ============================================================================
-template<typename Options, typename T = typename Options::ListQueue> class Task_ListQueue;
-
-template<typename Options>
-class Task_ListQueue<Options, typename Options::Disable> {};
-
-template<typename Options>
-class Task_ListQueue<Options, typename Options::Enable> {
-public:
-    uintptr_t nextPrev;
-    Task_ListQueue() : nextPrev(0) {}
-};
-
-// ============================================================================
 // Option Subtasks
 // ============================================================================
 template<typename Options, typename T = typename Options::Subtasks> class Task_Subtasks;
@@ -143,7 +128,7 @@ public:
 // ============================================================================
 template<typename Options>
 class TaskBaseDefault
-  : public detail::Task_ListQueue<Options>,
+  : public Options::TaskQueueUnsafeType::ElementData,
     public detail::Task_PassTaskExecutor<Options>,
     public detail::Task_GlobalId<Options>,
     public detail::Task_TaskName<Options>,

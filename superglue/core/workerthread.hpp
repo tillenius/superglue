@@ -68,8 +68,7 @@ public:
         this->thread = thread_;
         srand(TaskExecutor<Options>::getId());
 
-        ThreadManager<Options> &tm(TaskExecutor<Options>::getThreadManager());
-        tm.waitToStartThread();
+        TaskExecutor<Options>::getThreadManager().waitToStartThread();
         mainLoop();
     }
 };

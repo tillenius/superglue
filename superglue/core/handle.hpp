@@ -143,21 +143,26 @@ template<typename Options>
 class Handle_Lockable<Options, typename Options::Enable> {
     template<typename, typename> friend class Handle_Contributions;
     typedef typename Options::version_t version_t;
+    typedef typename Options::TaskQueueUnsafeType TaskQueueUnsafe;
 private:
     // queue of tasks waiting for the lock
-    TaskQueue<Options> lockListenerList;
+    TaskQueueSafe<TaskQueueUnsafe> lockListenerList;
     // If object is locked or not
     SpinLockAtomic dataLock;
 
     // Notify lock listeners when the lock is released
     void notifyLockListeners(TaskExecutor<Options> &taskExecutor) {
 
-        TaskQueueUnsafe<Options> wake;
-        lockListenerList.swap(wake);
-        if (wake.empty())
-            return;
+        TaskQueueUnsafe wake;
+        {
+            TaskQueueExclusive<typename Options::TaskQueueUnsafeType> list(lockListenerList);
+            if (list.empty())
+                return;
 
-        taskExecutor.getTaskQueue().push_front_list(wake);
+            list.swap(wake);
+        }
+
+        taskExecutor.getTaskQueue().push_front_list(wake); // destroys wake
 
         taskExecutor.getThreadManager().signalNewWork();
     }
@@ -173,7 +178,7 @@ public:
         if (dataLock.try_lock())
             return true;
 
-        TaskQueueExclusive<Options> list(lockListenerList);
+        TaskQueueExclusive<typename Options::TaskQueueUnsafeType> list(lockListenerList);
 
         // we have to make sure lock was not released here, or our listener is never woken.
         if (dataLock.try_lock())
