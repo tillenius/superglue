@@ -45,31 +45,39 @@ struct ThreadManager_PauseExecution<Options, typename Options::Enable> {
 // ===========================================================================
 template<typename Options, typename T = typename Options::Lockable>
 struct CheckLockableRequired {
-    typedef T type;
+    enum { access_types_needs_lockable = 1 };
 };
 
 template<typename Options>
 struct CheckLockableRequired<Options, typename Options::Disable> {
-    typedef typename Options::AccessInfoType AccessInfo;
-
     template<typename T>
     struct NeedsLockablePredicate {
         enum { result = ((T::exclusive == 1) && (T::commutative == 1)) ? 1 : 0 };
     };
 
-    // struct that typedefs T if n == 0.
-    template<typename T, int n> struct if_zero {};
-    template<typename T> struct if_zero<T, 0>
-    {
-        typedef T CONFIGURATION_ERROR___ACCESS_TYPES_NEEDS_LOCK_BUT_LOCKABLE_NOT_SET;
-    };
-
     typedef AccessUtil<Options> AU;
     typedef typename AU::template AnyType<NeedsLockablePredicate> NeedsLock;
-    enum { needs_lock = NeedsLock::result };
-    typedef typename if_zero<AccessInfo, needs_lock>::CONFIGURATION_ERROR___ACCESS_TYPES_NEEDS_LOCK_BUT_LOCKABLE_NOT_SET type;
+
+    enum { access_types_needs_lockable = NeedsLock::result ? 0 : 1};
 };
 
+template<bool> struct STATIC_ASSERT {};
+template<> struct STATIC_ASSERT<true> { typedef struct {} type; };
+
+template<typename Options>
+struct SANITY_CHECKS {
+
+    template<typename T>
+    struct is_unsigned {
+        enum { value = T(-1) > T(0) ? 1 : 0 };
+    };
+
+    // version_t must be an unsigned type
+    typedef typename STATIC_ASSERT< is_unsigned<typename Options::version_t>::value >::type check_version_t;
+
+    // check that Lockable isn't disabled when access types require it to be enabled
+    typedef typename STATIC_ASSERT< CheckLockableRequired<Options>::access_types_needs_lockable >::type check_lockable;
+};
 
 } // namespace detail
 
@@ -78,12 +86,12 @@ struct CheckLockableRequired<Options, typename Options::Disable> {
 // ===========================================================================
 template<typename Options>
 class ThreadManagerBase
-  : public detail::ThreadManager_PauseExecution<Options>
+  : public detail::ThreadManager_PauseExecution<Options>,
+    private detail::SANITY_CHECKS<Options>
 {
     template<typename> friend struct ThreadManager_GetCurrentThread;
     template<typename, typename> friend struct ThreadManager_GetThreadWorkspace;
     template<typename, typename> friend struct ThreadManager_PauseExecution;
-    typedef typename detail::CheckLockableRequired<Options>::type ACCESSINFOTYPE;
     typedef TaskQueueSafe<typename Options::TaskQueueUnsafeType> TaskQueue;
 
 private:
@@ -130,7 +138,6 @@ public:
             wt->run(this);
         }
     };
-
 
 public:
     ThreadManagerBase(int numWorkers_ = -1)

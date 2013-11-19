@@ -9,6 +9,7 @@ unittest:
 
 modular:
 	( cd test/modular ; make )
+	( cd test/fail ; make )
 
 examples:
 	( cd examples ; make )
