@@ -38,8 +38,6 @@ struct DefaultOptions {
     // Features
     typedef Disable TaskName;            // tasks must implement a getName() method
     typedef Disable TaskId;              // tasks have a getGlobalId() method
-    typedef Disable TaskPriorities;      // tasks must implement a getPriority() method
-    typedef Disable TaskStealableFlag;   // tasks must implement a isStealable() method
     typedef Disable HandleName;          // handles have setName() and getName() methods
     typedef Disable HandleId;            // handels have a getGlobalId() method
     typedef Enable Lockable;             // handles can be locked

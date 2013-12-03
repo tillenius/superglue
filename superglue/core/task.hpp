@@ -15,32 +15,6 @@ template<typename Options> class TaskExecutor;
 namespace detail {
 
 // ============================================================================
-// Option: StealableFlag
-// ============================================================================
-template<typename Options, typename T = typename Options::TaskStealableFlag> struct Task_StealableFlag;
-
-template<typename Options>
-struct Task_StealableFlag<Options, typename Options::Disable> {};
-
-template<typename Options>
-struct Task_StealableFlag<Options, typename Options::Enable> {
-    virtual bool isStealable() const = 0;
-};
-
-// ============================================================================
-// Option: TaskPriorities
-// ============================================================================
-template<typename Options, typename T = typename Options::TaskPriorities> struct Task_Priorities;
-
-template<typename Options>
-struct Task_Priorities<Options, typename Options::Disable> {};
-
-template<typename Options>
-struct Task_Priorities<Options, typename Options::Enable> {
-    virtual int getPriority() const = 0;
-};
-
-// ============================================================================
 // Option: Global ID for each task
 // ============================================================================
 template<typename Options, typename T = typename Options::TaskId> class Task_GlobalId;
@@ -135,8 +109,6 @@ class TaskBaseDefault
     public detail::Task_PassTaskExecutor<Options>,
     public detail::Task_GlobalId<Options>,
     public detail::Task_TaskName<Options>,
-    public detail::Task_Priorities<Options>,
-    public detail::Task_StealableFlag<Options>,
     public detail::Task_Contributions<Options>,
     public detail::Task_Subtasks<Options>
 {
