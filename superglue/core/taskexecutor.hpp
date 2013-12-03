@@ -12,17 +12,19 @@ namespace detail {
 // ============================================================================
 // Option NoStealing
 // ============================================================================
-template<typename Options, typename T = typename Options::Stealing> struct TaskExecutor_Stealing;
+template<typename Options, typename T = typename Options::Stealing> class TaskExecutor_Stealing;
 
 template<typename Options>
-struct TaskExecutor_Stealing<Options, typename Options::Disable> {
+class TaskExecutor_Stealing<Options, typename Options::Disable> {
+public:
     static TaskBase<Options> *steal() { return 0; }
     static void init_stealing(TaskExecutor<Options> *) {}
 };
 
 template<typename Options>
-struct TaskExecutor_Stealing<Options, typename Options::Enable> {
+class TaskExecutor_Stealing<Options, typename Options::Enable> {
     typename Options::StealOrder stealorder;
+public:
 
     void init_stealing(TaskExecutor<Options> *te) {
         stealorder.init(te);
@@ -46,14 +48,16 @@ struct TaskExecutor_Stealing<Options, typename Options::Enable> {
 // ============================================================================
 // Option TaskExecutor_PassTaskExecutor: Task called with task executor as argument
 // ============================================================================
-template<typename Options, typename T = typename Options::PassTaskExecutor> struct TaskExecutor_PassTaskExecutor;
+template<typename Options, typename T = typename Options::PassTaskExecutor> class TaskExecutor_PassTaskExecutor;
 
 template<typename Options>
-struct TaskExecutor_PassTaskExecutor<Options, typename Options::Disable> {
+class TaskExecutor_PassTaskExecutor<Options, typename Options::Disable> {
+protected:
     static void invokeTaskImpl(TaskBase<Options> *task) { task->run(); }
 };
 template<typename Options>
-struct TaskExecutor_PassTaskExecutor<Options, typename Options::Enable> {
+class TaskExecutor_PassTaskExecutor<Options, typename Options::Enable> {
+protected:
     void invokeTaskImpl(TaskBase<Options> *task) {
         task->run(static_cast<TaskExecutor<Options> &>(*this));
     }
@@ -65,7 +69,8 @@ struct TaskExecutor_PassTaskExecutor<Options, typename Options::Enable> {
 template<typename Options, typename T = typename Options::ThreadWorkspace> class TaskExecutor_GetThreadWorkspace;
 
 template<typename Options>
-struct TaskExecutor_GetThreadWorkspace<Options, typename Options::Disable> {
+class TaskExecutor_GetThreadWorkspace<Options, typename Options::Disable> {
+public:
     void resetWorkspaceIndex() const {}
 };
 
@@ -164,8 +169,8 @@ class TaskExecutorBase
     public detail::TaskExecutor_Subtasks<Options>,
     public Options::TaskExecutorInstrumentation
 {
-    template<typename, typename> friend struct TaskExecutor_Stealing;
-    template<typename, typename> friend struct TaskExecutor_PassThreadId;
+    template<typename, typename> friend class TaskExecutor_Stealing;
+    template<typename, typename> friend class TaskExecutor_PassThreadId;
     typedef TaskQueueSafe<typename Options::TaskQueueUnsafeType> TaskQueue;
 
 public:

@@ -34,7 +34,7 @@ class TestTaskQueuePrio : public TestCase {
     }
 
     static bool testPrio(std::string &name) { name = "testTaskQueuePrio";
-        typename OpDefault::TaskQueueUnsafeType q;
+        OpDefault::TaskQueueUnsafeType q;
 
         union {
             TaskBase<OpDefault> *taskBase;

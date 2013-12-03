@@ -7,7 +7,7 @@
 
 template<typename Options> class TaskExecutorBase;
 template<typename Options> class ThreadManagerBase;
-template<typename Options> class TaskQueueUnsafe;
+template<typename Options> class TaskQueueDefaultUnsafe;
 
 template <typename Options>
 struct DefaultOptions {
@@ -49,7 +49,7 @@ struct DefaultOptions {
     typedef Disable ThreadWorkspace;     // TaskExecutor have a getThreadWorkspace() method
     typedef Disable PauseExecution;      // No tasks are executed until setMayExecute(true) is called
     typedef Enable Stealing;             // Task stealing enabled
-    typedef Enable ListQueue;
+    typedef Disable Contributions;       // Run tasks but write to temp storage if output handle is busy
 
     // Size of ThreadWorkspace (only used if ThreadWorkspace is enabled)
     enum { ThreadWorkspace_size = 102400 };
@@ -58,9 +58,6 @@ struct DefaultOptions {
     struct LazyDependencyChecking {};
     struct EagerDependencyChecking {};
     typedef EagerDependencyChecking DependencyChecking;
-
-    // Contributions Options
-    typedef Disable Contributions;
 
     // Logging Options
     typedef Disable Logging;

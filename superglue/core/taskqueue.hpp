@@ -29,7 +29,7 @@ protected:
     TaskBase<Options> *first;
     TaskBase<Options> *last;
 
-    template<typename, typename> friend struct Log_DumpState;
+    template<typename, typename> friend class Log_DumpState;
 
 public:
     struct ElementData {

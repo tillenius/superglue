@@ -13,7 +13,7 @@ template<typename Options>
 class WorkerThread
   : public TaskExecutor<Options>
 {
-    template<typename, typename> friend struct WorkerThread_PassThreadId;
+    template<typename, typename> friend class WorkerThread_PassThreadId;
 protected:
     Thread *thread;
     bool terminateFlag;

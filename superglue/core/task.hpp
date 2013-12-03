@@ -80,28 +80,31 @@ public:
 // ============================================================================
 // Option PassTaskExecutor
 // ============================================================================
-template<typename Options, typename T = typename Options::PassTaskExecutor> struct Task_PassTaskExecutor;
+template<typename Options, typename T = typename Options::PassTaskExecutor> class Task_PassTaskExecutor;
 
 template<typename Options>
-struct Task_PassTaskExecutor<Options, typename Options::Disable> {
+class Task_PassTaskExecutor<Options, typename Options::Disable> {
+public:
     virtual void run() = 0;
 };
 
 template<typename Options>
-struct Task_PassTaskExecutor<Options, typename Options::Enable> {
+class Task_PassTaskExecutor<Options, typename Options::Enable> {
+public:
     virtual void run(TaskExecutor<Options> &) = 0;
 };
 
 // ============================================================================
 // Option TaskName
 // ============================================================================
-template<typename Options, typename T = typename Options::TaskName> struct Task_TaskName;
+template<typename Options, typename T = typename Options::TaskName> class Task_TaskName;
 
 template<typename Options>
-struct Task_TaskName<Options, typename Options::Disable> {};
+class Task_TaskName<Options, typename Options::Disable> {};
 
 template<typename Options>
-struct Task_TaskName<Options, typename Options::Enable> {
+class Task_TaskName<Options, typename Options::Enable> {
+public:
     virtual std::string getName() = 0;
 };
 
@@ -138,7 +141,7 @@ class TaskBaseDefault
     public detail::Task_Subtasks<Options>
 {
     template<typename, typename> friend class Task_PassThreadId;
-    template<typename, typename> friend struct Task_AccessData;
+    template<typename, typename> friend class Task_AccessData;
 
 protected:
     size_t numAccess;

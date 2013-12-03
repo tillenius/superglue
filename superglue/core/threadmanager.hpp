@@ -22,18 +22,20 @@ namespace detail {
 // ===========================================================================
 // Option PauseExecution
 // ===========================================================================
-template<typename Options, typename T = typename Options::PauseExecution> struct ThreadManager_PauseExecution;
+template<typename Options, typename T = typename Options::PauseExecution> class ThreadManager_PauseExecution;
 
 template<typename Options>
-struct ThreadManager_PauseExecution<Options, typename Options::Disable> {
+class ThreadManager_PauseExecution<Options, typename Options::Disable> {
+public:
     static bool mayExecute() { return true; }
 };
 
 template<typename Options>
-struct ThreadManager_PauseExecution<Options, typename Options::Enable> {
+class ThreadManager_PauseExecution<Options, typename Options::Enable> {
     char dummy[Options::HardwareModel::CACHE_LINE_SIZE];
     bool flag;
     char dummy2[Options::HardwareModel::CACHE_LINE_SIZE];
+public:
     ThreadManager_PauseExecution() : flag(false) {}
     void setMayExecute(bool flag_) { flag = flag_; }
     bool mayExecute() const { return flag; }
@@ -89,9 +91,9 @@ class ThreadManagerBase
   : public detail::ThreadManager_PauseExecution<Options>,
     private detail::SANITY_CHECKS<Options>
 {
-    template<typename> friend struct ThreadManager_GetCurrentThread;
-    template<typename, typename> friend struct ThreadManager_GetThreadWorkspace;
-    template<typename, typename> friend struct ThreadManager_PauseExecution;
+    template<typename> friend class ThreadManager_GetCurrentThread;
+    template<typename, typename> friend class ThreadManager_GetThreadWorkspace;
+    template<typename, typename> friend class ThreadManager_PauseExecution;
     typedef TaskQueueSafe<typename Options::TaskQueueUnsafeType> TaskQueue;
 
 private:

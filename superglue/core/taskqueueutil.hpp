@@ -12,7 +12,7 @@
 
 template<typename TaskQueueUnsafe>
 class TaskQueueSafe {
-    template<typename, typename> friend struct Log_DumpState;
+    template<typename, typename> friend class Log_DumpState;
     template<typename> friend class TaskQueueExclusive;
 
     TaskQueueUnsafe queue;
