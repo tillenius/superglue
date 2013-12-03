@@ -1,6 +1,6 @@
 FLAGS=-O3 -pedantic -Wall -Wno-long-long -Wconversion -I superglue/ -pthread
 
-tests: unittest modular
+tests: unittest modular csuperglue
 
 unittest:
 	mkdir -p bin
@@ -18,11 +18,7 @@ tools:
 	( cd tools ; make )
 
 csuperglue:
-	$(CXX) $(FLAGS) -I csuperglue/ csuperglue/csuperglue.cpp -c -o bin/csuperglue.o
-	$(CXX) $(FLAGS) -DSG_LOGGING -I csuperglue/ csuperglue/csuperglue.cpp -c -o bin/csupergluelog.o
-
-csupergluetest:
-	( cd test/csuperglue ; make )
+	( cd csuperglue ; make )
 
 clean:
 	rm -f ./bin/* ./examples/bin/*
