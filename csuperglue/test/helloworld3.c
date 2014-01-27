@@ -14,12 +14,16 @@ void my_task(void *args_) {
 
 int main() {
     struct my_args args;
+    sg_task_t task;
+
     args.i = 32;
 
     sg_init();
-    sg_submit(my_task, &args, sizeof(struct my_args), 0, 0);
+    task = sg_create_task(my_task, &args, sizeof(struct my_args), NULL);
+    sg_submit_task(task);
     sg_barrier();
-    sg_submit(my_task, &args, sizeof(struct my_args), 0, 0);
+    task = sg_create_task(my_task, &args, sizeof(struct my_args), NULL);
+    sg_submit_task(task);
     sg_destroy();
     return 0;
 }

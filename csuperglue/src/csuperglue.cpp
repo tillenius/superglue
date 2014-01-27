@@ -26,18 +26,13 @@ ThreadManager<Options> *superglue;
 class CTaskBase : public Task<Options> {
 protected:
     sg_task_function function;
-    char *args;
+    void *args;
 
 public:
-    CTaskBase(sg_task_function function_, void *args_, size_t argsize)
-    : function(function_)
-    {
-        args = new char[argsize];
-        memcpy(args, args_, argsize);
-    }
-    virtual ~CTaskBase() {
-        delete[] args;
-    }
+    CTaskBase(sg_task_function function_, void *args_)
+    : function(function_), args(args_)
+    {}
+    virtual ~CTaskBase() {}
 
     void run() {
         function(args);
@@ -50,8 +45,20 @@ class CTask : public CTaskBase {
 protected:
     std::string name;
 public:
-    CTask(sg_task_function function, void *args, size_t argsize, const char *name_)
-    : CTaskBase(function, args, argsize), name(name_ == NULL ? "" : name_) {}
+    CTask(sg_task_function function, void *args_, size_t argsize, const char *name_)
+    : CTaskBase(function, new char[argsize]), name(name_ == NULL ? "" : name_) {
+        memcpy(args, args_, argsize);
+    }
+    virtual ~CTask() { delete [] (char *) args; }
+    std::string getName() { return name; }
+};
+
+class CInplaceTask : public CTaskBase {
+protected:
+    std::string name;
+public:
+    CInplaceTask(sg_task_function function, void *args, const char *name_)
+    : CTaskBase(function, args), name(name_ == NULL ? "" : name_) {}
     std::string getName() { return name; }
 };
 
@@ -59,14 +66,28 @@ public:
 
 class CTask : public CTaskBase {
 public:
-    CTask(sg_task_function function, void *args, size_t argsize, const char *)
-    : CTaskBase(function, args, argsize) {}
+    CTask(sg_task_function function, void *args_, size_t argsize, const char *)
+    : CTaskBase(function, new char[argsize]) {
+        memcpy(args, args_, argsize);
+    }
+    virtual ~CTask() { delete [] (char *) args; }
+};
+
+class CInplaceTask : public CTaskBase {
+public:
+    CInplaceTask(sg_task_function function, void *args, const char *)
+    : CTaskBase(function, args) {}
 };
 
 #endif // SG_LOGGING
 
 extern "C" sg_task_t sg_create_task(sg_task_function function, void *args, size_t argsize, const char *name) {
     CTask *task(new CTask(function, args, argsize, name));
+    return (sg_task_t) task;
+}
+
+extern "C" sg_task_t sg_create_inplace_task(sg_task_function function, void *args, const char *name) {
+    CInplaceTask *task(new CInplaceTask(function, args, name));
     return (sg_task_t) task;
 }
 
@@ -84,6 +105,24 @@ extern "C" void sg_submit_task(sg_task_t task_) {
 extern "C" void sg_submit(sg_task_function function, void *args, size_t argsize, const char *name, ...) {
     va_list deps;
     CTask *task(new CTask(function, args, argsize, name));
+
+    va_start(deps, name);
+
+    for (;;) {
+        int type = va_arg(deps, int);
+        if (type == 0)
+            break;
+        Handle<Options> *handle = va_arg(deps, Handle<Options> *);
+
+        task->registerAccess((ReadWriteAdd::Type) (type-1), handle);
+    }
+    va_end(deps);
+    superglue->submit(task);
+}
+
+extern "C" void sg_submit_inplace(sg_task_function function, void *args, const char *name, ...) {
+    va_list deps;
+    CInplaceTask *task(new CInplaceTask(function, args, name));
 
     va_start(deps, name);
 

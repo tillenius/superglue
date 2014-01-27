@@ -20,6 +20,8 @@ void sg_destroy();
 
 /* Create a task. The task must be submitted to SuperGlue using sg_submit_task, or there is a memory leak. */
 sg_task_t sg_create_task(sg_task_function function, void *args, size_t argsize, const char *name);
+/* Version that does not make a private copy of the arguments. */
+sg_task_t sg_create_inplace_task(sg_task_function function, void *args, const char *name);
 
 /* Add an access to a task. */
 void sg_register_access(sg_task_t task, enum sg_access_type type, sg_handle_t handle);
@@ -36,6 +38,8 @@ void sg_submit_task(sg_task_t task);
                  Example: [sg_access_type, sg_handle, sg_access_type, sg_handle, 0]
 */
 void sg_submit(sg_task_function function, void *args, size_t argsize, const char *name, ...);
+/* Version that does not make a private copy of the arguments. */
+void sg_submit_inplace(sg_task_function function, void *args, const char *name, ...);
 
 /* Wait for all submitted tasks to finish */
 void sg_barrier();
