@@ -103,7 +103,7 @@ struct propagate : public Task<Options> {
     : index(index_), i(i_), j(j_) {
         addedby = addedby_;
         registerAccess(ReadWriteAdd::read, src);
-        addAccess(ReadWriteAdd::write, dst, 0);
+        fulfill(ReadWriteAdd::write, dst, 0);
     }
     void run() {}
     std::string getName() {

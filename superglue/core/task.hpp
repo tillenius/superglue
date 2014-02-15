@@ -162,7 +162,7 @@ public:
         // but then any user-overloaded TaskBaseDefault() class must forward both constructors.
         TaskBase<Options>::accessPtr = &access[0];
     }
-    void addAccess(AccessType type, Handle<Options> *handle, version_t version) {
+    void fulfill(AccessType type, Handle<Options> *handle, version_t version) {
         Access<Options> &a(access[TaskBase<Options>::numAccess]);
         a.handle = handle;
         a.requiredVersion = version;
@@ -172,7 +172,7 @@ public:
         ++TaskBase<Options>::numAccess;
     }
     void registerAccess(AccessType type, Handle<Options> *handle) {
-        addAccess(type, handle, handle->schedule(type));
+        fulfill(type, handle, handle->schedule(type));
     }
 };
 
@@ -190,7 +190,7 @@ class TaskDefault<Options, -1> : public TaskBase<Options> {
 protected:
     access_vector_t access;
 public:
-    void addAccess(AccessType type, Handle<Options> *handle, version_t version) {
+    void fulfill(AccessType type, Handle<Options> *handle, version_t version) {
         access.push_back(Access<Options>(handle, version));
         Access<Options> &a(access[access.size()-1]);
         if (AccessUtil<Options>::needsLock(type))
@@ -201,7 +201,7 @@ public:
     }
 
     void registerAccess(AccessType type, Handle<Options> *handle) {
-        addAccess(type, handle, handle->schedule(type));
+        fulfill(type, handle, handle->schedule(type));
     }
 };
 
