@@ -21,9 +21,6 @@ protected:
     WorkerThread(const WorkerThread &);
     const WorkerThread &operator=(const WorkerThread &);
 
-    void waitForWork() {
-        Atomic::rep_nop();
-    }
 
     // Called from this thread only
     void mainLoop() {
@@ -34,12 +31,12 @@ protected:
 
             TaskExecutor<Options>::tm.barrierProtocol.waitAtBarrier(*this);
 
-            if (*static_cast<volatile bool *>(&terminateFlag)) {
+            if (terminateFlag) {
                 ThreadUtil::exit();
                 return;
             }
 
-            waitForWork();
+            Atomic::rep_nop();
         }
     }
 

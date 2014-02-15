@@ -17,7 +17,7 @@ public:
     void wait() {
         Atomic::decrease(&counter);
         while (counter > 0)
-            Atomic::yield();
+            Atomic::rep_nop();
     }
 };
 

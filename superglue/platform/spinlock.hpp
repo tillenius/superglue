@@ -6,8 +6,8 @@
 
 class SpinLockAtomic {
 public:
-    volatile unsigned int v_;
-    char padding[64-sizeof(volatile unsigned int)];
+    unsigned int v_;
+    char padding[64-sizeof(unsigned int)];
 
     SpinLockAtomic(const SpinLockAtomic &);
     const SpinLockAtomic &operator=(const SpinLockAtomic &);
@@ -24,9 +24,11 @@ public:
         Atomic::lock_release(&v_);
     }
     void lock() {
-        while (v_ == 1);
+        while (v_ == 1)
+            Atomic::rep_nop();
         while (!try_lock())
-            while (v_ == 1);
+            while (v_ == 1)
+                Atomic::rep_nop();
     }
 };
 

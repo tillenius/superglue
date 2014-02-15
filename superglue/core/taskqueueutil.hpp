@@ -73,6 +73,10 @@ public:
         queue.swap(rhs);
     }
 
+    bool empty() { 
+        return queue.empty();
+    }
+
     bool empty_safe() { 
         SpinLockScoped lock(spinlock);
         return queue.empty();

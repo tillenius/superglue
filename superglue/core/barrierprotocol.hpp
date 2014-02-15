@@ -29,7 +29,8 @@ public:
 
     // Called from WorkerThread: Wait at barrier if requested.
     void waitAtBarrier(WorkerThread<Options> &wwt) {
-        const int local_state(*static_cast<volatile int *>(&state));
+        Atomic::compiler_fence();
+        const int local_state(state);
         if (local_state == 0)
             return;
 
@@ -45,24 +46,32 @@ public:
             if (Atomic::decrease_nv(&barrierCounter) != 0) {
                 // wait for next state
                 for (;;) {
-                    const int local_abort(*static_cast<volatile int *>(&abort));
+                    const int local_abort(abort);
                     if (local_abort == 1) {
                         // aborted from elsewhere -- skip spinloop and start workloop
                         return;
                     }
 
-                    if (!wwt.getTaskQueue().empty_safe()) {
+                    if (!wwt.getTaskQueue().empty()) {
                         abort = 1;
                         Atomic::memory_fence_producer();
                         // we have to abort -- indicate others and start workloop
                         return; // work loop, state == 1
                     }
 
-                    const int new_local_state(*static_cast<volatile int *>(&state));
+                    const int new_local_state(state);
                     if (new_local_state == 2) {
                         // completed phase 1 without seeing abort. continue to phase 2
                         break;
                     }
+                    Atomic::yield();
+                    Atomic::compiler_fence();
+                }
+                if (!wwt.getTaskQueue().empty_safe()) {
+                    abort = 1;
+                    Atomic::memory_fence_producer();
+                    // we have to abort -- indicate others and start workloop
+                    return; // work loop, state == 1
                 }
                 // phase 1 completed without abort.
                 state = 2;
@@ -73,7 +82,7 @@ public:
 
                     barrierCounter = TaskExecutor<Options>::getThreadManager().getNumWorkers()-1;
                     wwt.my_barrier_state = 0;
-                    const int local_abort(*static_cast<volatile int *>(&abort));
+                    const int local_abort(abort);
                     if (local_abort != 1) {
                         if (!wwt.getTaskQueue().empty_safe()) {
                             // we have to abort -- start next phase and exit to work-loop
@@ -101,7 +110,7 @@ public:
                     return;
                 }
 
-                const int local_abort(*static_cast<volatile int *>(&abort));
+                const int local_abort(abort);
                 barrierCounter = num_workers-1;
                 wwt.my_barrier_state = 2;
                 if (local_abort == 1) {
@@ -122,24 +131,26 @@ public:
 
             // in phase 2, but not last -- wait for completion
             for (;;) {
-                const int local_abort(*static_cast<volatile int *>(&abort));
+                const int local_abort(abort);
                 if (local_abort == 1) {
                     // aborted from elsewhere -- skip spinloop and start workloop
                     return;
                 }
 
-                if (!wwt.getTaskQueue().empty_safe()) {
+                if (!wwt.getTaskQueue().empty()) {
                     abort = 1;
                     Atomic::memory_fence_producer();
                     // we have to abort -- indicate others and start workloop
                     return;
                 }
 
-                const int new_local_state(*static_cast<volatile int *>(&state));
+                const int new_local_state(state);
                 if (new_local_state != 2) {
                     // completed phase 2 without seeing abort. finish barrier
                     return;
                 }
+                Atomic::yield();
+                Atomic::compiler_fence();
             }
         }
 
@@ -170,9 +181,10 @@ public:
             state = 1;
 
             for (;;) {
-                const int local_state( *static_cast<volatile int *>(&state) );
+                const int local_state(state);
                 if (local_state == 0) {
-                    const int local_abort(*static_cast<volatile int *>(&abort));
+                    Atomic::memory_fence_consumer();
+                    const int local_abort(abort);
                     if (local_abort == 1)
                         break;
                     if (!TaskExecutor<Options>::getTaskQueue().empty_safe())
@@ -180,18 +192,22 @@ public:
                     return;
                 }
 
-                const int local_abort(*static_cast<volatile int *>(&abort));
+                const int local_abort(abort);
                 if (local_abort == 1 || !TaskExecutor<Options>::getTaskQueue().empty_safe()) {
-                    while (*static_cast<volatile int *>(&state) != 0)
+                    while (state != 0) {
                         while (TaskExecutor<Options>::executeTasks());
+                        Atomic::compiler_fence();
+                    }
                     break;
                 }
+                Atomic::rep_nop();
             }
         }
     }
 
     void signalNewWork() {
-        const int local_abort(*static_cast<volatile int *>(&abort));
+        Atomic::compiler_fence();
+        const int local_abort(abort);
         if (local_abort != 1) {
             abort = 1;
             Atomic::memory_fence_producer();
