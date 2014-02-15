@@ -61,40 +61,60 @@ def load_file(filename):
     cpattern = re.compile('(.*) \((.*)\)')
     while True:
         line = fh.readline()
+        if not line:
+          break
         if line.startswith('LOG 2'):
             continue
+        # [thread id]: [start] [length] [name [perf]]
         g = pattern.match(line)
-        if g == None:
-            g = mpipattern.match(line)
-            if g == None:
-                break
-            name = g.group(5)
-            gg = cpattern.match(name)
-            cache = 0
-            if gg != None:
+        if g != None:
+          name = g.group(4)
+          gg = cpattern.match(name)
+          cache = 0
+          if gg != None:
               name = gg.group(1)
               cache = int(gg.group(2))
-            out.append({'name': name.strip(),
-                        'procid': int(g.group(1)),
-                        'threadid': int(g.group(2)),
-                        'start': int(g.group(3)),
-                        'length': int(g.group(4)),
-                        'end': int(g.group(3)) + int(g.group(4)),
-                        'cache': cache})
-        else:
-            name = g.group(4)
-            gg = cpattern.match(name)
-            cache = 0
-            if gg != None:
-                name = gg.group(1)
-                cache = int(gg.group(2))
-            out.append({'name': name.strip(),
-                        'procid': 0,
-                        'threadid': int(g.group(1)),
-                        'start': int(g.group(2)),
-                        'length': int(g.group(3)),
-                        'end': int(g.group(2)) + int(g.group(3)),
-                        'cache': cache})
+          out.append({'name': name.strip(),
+                      'procid': 0,
+                      'threadid': int(g.group(1)),
+                      'start': int(g.group(2)),
+                      'length': int(g.group(3)),
+                      'end': int(g.group(2)) + int(g.group(3)),
+                      'cache': cache})
+          continue
+
+        # [node number] [thread id]: [start] [length] [name [perf]]
+        g = mpipattern.match(line)
+        if g != None:
+          name = g.group(5)
+          gg = cpattern.match(name)
+          cache = 0
+          if gg != None:
+            name = gg.group(1)
+            cache = int(gg.group(2))
+          out.append({'name': name.strip(),
+                      'procid': int(g.group(1)),
+                      'threadid': int(g.group(2)),
+                      'start': int(g.group(3)),
+                      'length': int(g.group(4)),
+                      'end': int(g.group(3)) + int(g.group(4)),
+                      'cache': cache})
+          continue
+
+        # [thread id] [start] [length] [name]
+        w = line.split()
+        if len(w) == 4:
+          out.append({'name': w[3],
+                      'procid': 0,
+                      'threadid': int(w[0]),
+                      'start':  float(w[1])*1e6,
+                      'length': float(w[2])*1e6,
+                      'end': (float(w[1])+float(w[2]))*1e6,
+                      'cache': 0})
+          continue
+
+        # parse error
+        print "Error parsing line: ", line
     fh.close()
     return out
 
