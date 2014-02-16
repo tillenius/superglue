@@ -293,34 +293,38 @@ public:
 
     // Called from this thread only
     bool executeTasks() {
-        TaskBase<Options> *task = getTaskInternal();
-        if (task == 0)
-            return false;
+        for (;;) {
+            Options::TaskExecutorInstrumentation::getTaskBefore();
+            TaskBase<Options> *task = getTaskInternal();
+            Options::TaskExecutorInstrumentation::getTaskAfter();
+            if (task == 0)
+                return false;
 
-        if (!dependenciesReadyAtExecution(task, typename Options::DependencyChecking())) {
-            Options::TaskExecutorInstrumentation::taskNotRunDeps();
-            return false;
-        }
+            if (!dependenciesReadyAtExecution(task, typename Options::DependencyChecking())) {
+                Options::TaskExecutorInstrumentation::taskNotRunDeps();
+                continue;
+            }
 
-        // book-keeping
-        detail::TaskExecutor_GetThreadWorkspace<Options>::resetWorkspaceIndex();
-        applyOldContributionsBeforeRead(task);
+            // book-keeping
+            detail::TaskExecutor_GetThreadWorkspace<Options>::resetWorkspaceIndex();
+            applyOldContributionsBeforeRead(task);
 
-        // run with contributions, if that is activated
-        if (runContrib(task)) {
+            // run with contributions, if that is activated
+            if (runContrib(task)) {
+                invokeTask(task);
+                return true;
+            }
+
+            // lock if needed
+            if (!tryLock(task)) {
+                Options::TaskExecutorInstrumentation::taskNotRunLock();
+                continue;
+            }
+
+            // run
             invokeTask(task);
             return true;
         }
-
-        // run, lock if needed
-        if (tryLock(task)) {
-            invokeTask(task);
-            return true;
-        }
-        else {
-            Options::TaskExecutorInstrumentation::taskNotRunLock();
-        }
-        return false;
     }
 
     void submit(TaskBase<Options> *task) {

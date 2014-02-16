@@ -69,6 +69,8 @@ struct DefaultOptions {
         static void finalize() {}
         static void runTaskBefore(TaskBase<Options> *) {}
         static void runTaskAfter(TaskBase<Options> *) {}
+        static void getTaskBefore() {}
+        static void getTaskAfter() {}
         static void taskNotRunDeps() {}
         static void taskNotRunLock() {}
     };

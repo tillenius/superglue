@@ -17,6 +17,8 @@ struct TaskExecutorTiming {
         stop = Time::getTime();
         Log<Options>::log(detail::GetName::getName(task).c_str(), start, stop);
     }
+    static void getTaskBefore() {}
+    static void getTaskAfter() {}
     static void taskNotRunDeps() {}
     static void taskNotRunLock() {}
 };
