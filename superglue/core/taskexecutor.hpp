@@ -2,7 +2,6 @@
 #define __TASKEXECUTOR_HPP__
 
 #include "core/log_dag.hpp"
-#include "core/taskqueueutil.hpp"
 
 template<typename Options> class ThreadManager;
 template<typename Options> class TaskExecutor;
@@ -171,7 +170,7 @@ class TaskExecutorBase
 {
     template<typename, typename> friend class TaskExecutor_Stealing;
     template<typename, typename> friend class TaskExecutor_PassThreadId;
-    typedef TaskQueueSafe<typename Options::TaskQueueUnsafeType> TaskQueue;
+    typedef typename Options::ReadyListType TaskQueue;
 
 public:
     const int id;
@@ -282,6 +281,7 @@ public:
       : id(id_), tm(tm_)
     {
         TaskExecutor<Options> *this_(static_cast<TaskExecutor<Options> *>(this));
+        readyList.init(tm.getNumQueues());
         Options::TaskExecutorInstrumentation::init(*this_);
         this_->init_stealing(this_);
     }

@@ -105,7 +105,7 @@ public:
 // ============================================================================
 template<typename Options>
 class TaskBaseDefault
-  : public Options::TaskQueueUnsafeType::ElementData,
+  : public Options::ReadyListType::ElementData,
     public detail::Task_PassTaskExecutor<Options>,
     public detail::Task_GlobalId<Options>,
     public detail::Task_TaskName<Options>,

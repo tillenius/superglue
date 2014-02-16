@@ -1,7 +1,6 @@
 #ifndef __TYPES_HPP__
 #define __TYPES_HPP__
 
-#include "orderedvec.hpp"
 #include <vector>
 #include <deque>
 
@@ -18,11 +17,6 @@ struct Types {
         typedef typename std::deque<T, typename Options::template Alloc<T>::type > type;
     };
 
-    typedef typename Options::version_t version_t;
-    typedef typename Options::TaskQueueUnsafeType TaskQueueUnsafe;
-
-    typedef ordered_vec_t< typename deque_t< elem_t<version_t, TaskQueueUnsafe> >::type, version_t, TaskQueueUnsafe> versionmap_t;
-    typedef typename deque_t<TaskBase<Options> *>::type taskdeque_t;
 };
 
 #endif // __TYPES_HPP__

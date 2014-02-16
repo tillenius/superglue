@@ -8,7 +8,8 @@
 
 class TestTaskQueuePrio : public TestCase {
     struct OpDefault : public DefaultOptions<OpDefault> {
-        typedef TaskQueuePrioUnsafe<OpDefault> TaskQueueUnsafeType;
+        typedef TaskQueuePrio<OpDefault> ReadyListType;
+        typedef TaskQueuePrio<OpDefault> WaitListType;
     };
 
     struct LowPrioTask : public TaskBase<OpDefault> {
@@ -34,7 +35,9 @@ class TestTaskQueuePrio : public TestCase {
     }
 
     static bool testPrio(std::string &name) { name = "testTaskQueuePrio";
-        OpDefault::TaskQueueUnsafeType q;
+        typedef typename OpDefault::ReadyListType::unsafe_t TaskQueueUnsafe;
+
+        TaskQueueUnsafe q;
 
         union {
             TaskBase<OpDefault> *taskBase;

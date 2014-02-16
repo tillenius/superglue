@@ -1,9 +1,13 @@
 #ifndef __TASKQUEUE_DEQUE_HPP__
 #define __TASKQUEUE_DEQUE_HPP__
 
+#include "core/taskqueuesafe.hpp"
+
+namespace detail {
 template<typename Options>
 class TaskQueueDequeUnsafe {
-    typedef typename Types<Options>::taskdeque_t taskdeque_t;
+    typedef TaskBase<Options> * taskptr_t;
+    typedef typename Types<Options>::template deque_t<taskptr_t>::type taskdeque_t;
     taskdeque_t q;
 
 public:
@@ -51,6 +55,15 @@ public:
     void swap(TaskQueueDequeUnsafe &rhs) {
         std::swap(q, rhs.q);
     }
+};
+
+}
+
+template<typename Options>
+class TaskQueueDeque : public detail::TaskQueueSafe< detail::TaskQueueDequeUnsafe< Options >,
+                                                     detail::QueueSpinLocked > {
+public:
+    typedef typename detail::TaskQueueDequeUnsafe<Options> unsafe_t;
 };
 
 #endif // __TASKQUEUE_DEQUE_HPP__

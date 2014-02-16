@@ -8,7 +8,7 @@
 
 class TestTaskQueueDeque : public TestCase {
     struct OpDefault : public DefaultOptions<OpDefault> {
-        typedef TaskQueueDequeUnsafe<OpDefault> TaskQueueUnsafeType;
+        typedef TaskQueueDeque<OpDefault> TaskQueueType;
     };
 
     static bool testTaskQueue(std::string &name) {

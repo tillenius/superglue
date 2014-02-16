@@ -17,7 +17,7 @@ struct TaskQueueTest {
     };
 
     static bool testTaskQueueImpl(std::string &name) { name = "testTaskQueue";
-        typename Options::TaskQueueUnsafeType q;
+        typename Options::ReadyListType::unsafe_t q;
 
         if (!q.empty()) return false;
         q.push_back(new MyTask("A"));

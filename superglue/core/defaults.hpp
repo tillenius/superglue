@@ -33,7 +33,8 @@ struct DefaultOptions {
     };
     typedef TaskExecutorBase<Options> TaskExecutorType;
     typedef ThreadManagerBase<Options> ThreadManagerType;
-    typedef TaskQueueDefaultUnsafe<Options> TaskQueueUnsafeType;
+    typedef TaskQueueDefault<Options> WaitListType;
+    typedef TaskQueueDefault<Options> ReadyListType;
 
     // Features
     typedef Disable TaskName;            // tasks must implement a getName() method

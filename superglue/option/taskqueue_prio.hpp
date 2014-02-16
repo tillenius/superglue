@@ -1,27 +1,12 @@
 #ifndef __TASKQUEUE_PRIO_HPP__
 #define __TASKQUEUE_PRIO_HPP__
 
-#include "core/types.hpp"
-#include "platform/spinlock.hpp"
-#include "core/taskqueue.hpp"
-#include "core/taskqueueutil.hpp"
-#include "core/log.hpp"
+#include "core/taskqueueunsafe.hpp"
+#include "core/taskqueuesafe.hpp"
 
-#include <stdint.h>
-
-template<typename, typename> class Log_DumpState;
 template<typename Options> class TaskBase;
-template<typename Options> class Log;
 
-// TaskQueueUnsafe is a (non-thread-safe) doubly linked list
-// (or "xor linked list", see http://en.wikipedia.org/wiki/XOR_linked_list)
-//
-// To walk forward in the list: next = prev ^ curr->nextPrev
-//
-// Example: List elements: A, B, C
-//
-//  0     A     B     C     0
-//  A    0^B   A^B   B^0    C
+namespace detail {
 
 template<typename Options>
 class TaskQueuePrioUnsafe {
@@ -30,13 +15,13 @@ protected:
     TaskQueueDefaultUnsafe<Options> lowprio;
 
 public:
-    struct ElementData {
-        uintptr_t nextPrev;
+    struct ElementData : public TaskQueueDefaultUnsafe<Options>::ElementData {
         bool is_prioritized;
-        ElementData() : nextPrev(0), is_prioritized(false) {}
+        ElementData() : is_prioritized(false) {}
     };
 
     typedef TaskBase<Options> value_type;
+    void init(int num_threads) {}
 
     TaskQueuePrioUnsafe() {}
 
@@ -97,5 +82,10 @@ public:
         return highprio.size() + lowprio.size();
     }
 };
+}
 
-#endif // __TASKQUEUE_HPP__
+template<typename Options>
+class TaskQueuePrio : public detail::TaskQueueSafe< detail::TaskQueuePrioUnsafe< Options >,
+                                                    detail::QueueSpinLocked > {};
+
+#endif // __TASKQUEUE_PRIO_HPP__

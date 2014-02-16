@@ -3,7 +3,8 @@
 #include "option/taskqueue_prio.hpp"
 
 struct Options : public DefaultOptions<Options> {
-    typedef TaskQueuePrioUnsafe<Options> TaskQueueUnsafeType;
+    typedef TaskQueuePrio<Options> ReadyListType;
+    typedef TaskQueuePrio<Options> WaitListType;
 };
 
 int main() {

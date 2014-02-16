@@ -1,6 +1,7 @@
 #ifndef __VERSIONQUEUE_HPP_
 #define __VERSIONQUEUE_HPP_
 
+#include "orderedvec.hpp"
 #include "platform/spinlock.hpp"
 #include "platform/atomic.hpp"
 #include <limits>
@@ -9,9 +10,12 @@ template<typename Options>
 class VersionQueue {
     template<typename> friend class VersionQueueExclusive;
 private:
-    typedef typename Types<Options>::versionmap_t versionmap_t;
     typedef typename Options::version_t version_t;
-    typedef typename Options::TaskQueueUnsafeType TaskQueueUnsafe;
+    typedef typename Options::WaitListType WaitListType;
+    typedef typename WaitListType::unsafe_t TaskQueueUnsafe;
+    typedef elem_t<version_t, TaskQueueUnsafe> vecelem_t;
+    typedef typename Types<Options>::template deque_t<vecelem_t>::type elemdeque_t;
+    typedef ordered_vec_t< elemdeque_t, version_t, TaskQueueUnsafe> versionmap_t;
 
     // lock that must be held during usage of the listener list, and when unlocking
     SpinLock versionListenerSpinLock;

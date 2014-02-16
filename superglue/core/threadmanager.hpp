@@ -94,7 +94,7 @@ class ThreadManagerBase
     template<typename> friend class ThreadManager_GetCurrentThread;
     template<typename, typename> friend class ThreadManager_GetThreadWorkspace;
     template<typename, typename> friend class ThreadManager_PauseExecution;
-    typedef TaskQueueSafe<typename Options::TaskQueueUnsafeType> TaskQueue;
+    typedef typename Options::ReadyListType TaskQueue;
 
 private:
     const int numWorkers;
@@ -114,6 +114,7 @@ public:
     void registerThread(int id, WorkerThread<Options> *wt) {
         threads[id-1] = wt;
         taskQueues[id] = &wt->getTaskQueue();
+        taskQueues[id]->init_thread(id);
         Log<Options>::registerThread(id);
     }
 
@@ -153,6 +154,7 @@ public:
         Options::ThreadAffinity::pin_main_thread();
         taskQueues = new TaskQueue *[getNumQueues()];
         taskQueues[0] = &barrierProtocol.getTaskQueue();
+        taskQueues[0]->init(getNumQueues());
 
         threads = new WorkerThread<Options>*[numWorkers];
         startBarrier = new Barrier(numWorkers+1);

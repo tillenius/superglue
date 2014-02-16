@@ -10,7 +10,7 @@ template<typename Options> class TaskBase;
 // Start from random queue and search upwards
 template<typename Options>
 class DefaultStealOrder {
-    typedef TaskQueueSafe<typename Options::TaskQueueUnsafeType> TaskQueue;
+    typedef typename Options::ReadyListType TaskQueue;
 private:
     size_t seed;
 
