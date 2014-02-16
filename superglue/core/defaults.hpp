@@ -29,7 +29,7 @@ struct DefaultOptions {
     typedef HandleBase<Options> HandleType;
     typedef TaskBaseDefault<Options> TaskBaseType;
     template<int N> struct TaskType {
-        typedef TaskDefault<Options, N> type;
+        typedef TaskAccessMixin<Options, TaskBase<Options>, N> type;
     };
     typedef TaskExecutorBase<Options> TaskExecutorType;
     typedef ThreadManagerBase<Options> ThreadManagerType;
