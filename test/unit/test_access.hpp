@@ -39,12 +39,6 @@ class TestAccess : public TestCase {
         Handle<OpLockable> h1, h2;
         Access<OpLockable> a11(&h1, 0), a12(&h1, 0);
         Access<OpLockable> a21(&h2, 0), a22(&h2, 0);
-        if (a11 < a21 && a21 < a11) return false;
-        if (a11 < a22 && a22 < a11) return false;
-        if (!(a11 < a21) && !(a21 < a11)) return false;
-        if (!(a11 < a22) && !(a22 < a11)) return false;
-
-        if (a11 < a12 || a12 < a11) return false;
 
         if (a11.needsLock()) return false;
 

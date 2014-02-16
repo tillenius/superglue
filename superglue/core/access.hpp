@@ -45,57 +45,68 @@ template<typename Options, typename T = typename Options::Lockable> class Access
 
 template<typename Options>
 class Access_Lockable<Options, typename Options::Disable> {
+    typedef typename Options::version_t version_t;
 public:
     static bool getLock() { return true; }
     static bool needsLock() { return false; }
     static void releaseLock(TaskExecutor<Options> &) {}
     static bool getLockOrNotify(TaskBase<Options> *) { return true; }
     static void setNeedsLock(bool) {}
+    version_t finished(TaskExecutor<Options> &taskExecutor) {
+        const Access<Options> *this_(static_cast<const Access<Options> *>(this));
+        return this_->handle->increaseCurrentVersion(taskExecutor);
+    }
 };
 
 template<typename Options>
 class Access_Lockable<Options, typename Options::Enable> {
+    typedef typename Options::lockcount_t lockcount_t;
+    typedef typename Options::version_t version_t;
 private:
-    bool lockNeeded;
+    lockcount_t required;
 public:
-    Access_Lockable() : lockNeeded(false) {}
-
-    // Used to determine locking order
-    bool operator<(const Access<Options> &rhs) const {
-        const Access<Options> *this_(static_cast<const Access<Options> *>(this));
-        return (this_->handle < rhs.handle);
-    }
+    Access_Lockable() : required(0) {}
 
     // Check if lock is available, or add a listener
     bool getLockOrNotify(TaskBase<Options> *task) const {
-        if (!lockNeeded)
+        if (required == 0)
             return true;
 
         const Access<Options> *this_(static_cast<const Access<Options> *>(this));
-        return this_->handle->getLockOrNotify(task);
+        return this_->handle->getLockOrNotify(required, task);
     }
 
     // Get lock if its free, or return false.
     // Low level interface to lock several objects simultaneously
     bool getLock() const {
-        if (!lockNeeded)
+        if (required == 0)
             return true;
 
         const Access<Options> *this_(static_cast<const Access<Options> *>(this));
-        return this_->handle->getLock();
+        return this_->handle->getLock(required);
     }
 
+    // Low level interface to unlock when failed to lock several objects
     void releaseLock(TaskExecutor<Options> &taskExecutor) const {
-        if (!lockNeeded)
+        if (required == 0)
             return;
 
         const Access<Options> *this_(static_cast<const Access<Options> *>(this));
-        this_->handle->releaseLock(taskExecutor);
+        this_->handle->releaseLock(required, taskExecutor);
     }
 
 public:
-    void setNeedsLock(bool needsLock_) { lockNeeded = needsLock_; }
-    bool needsLock() const { return lockNeeded; }
+    void setNeedsLock(bool needsLock_) { required = needsLock_ ? 1 : 0; }
+    bool needsLock() const { return required != 0; }
+    version_t finished(TaskExecutor<Options> &taskExecutor) {
+        const Access<Options> *this_(static_cast<const Access<Options> *>(this));
+        version_t ver;
+        if (this_->useContrib())
+            ver = this_->handle->increaseCurrentVersionNoUnlock(taskExecutor);
+        else
+            ver = this_->handle->increaseCurrentVersionUnlock(required, taskExecutor);
+        return ver;
+    }
 };
 
 } // namespace detail

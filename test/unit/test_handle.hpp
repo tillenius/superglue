@@ -45,9 +45,9 @@ class TestHandle : public TestCase {
         Handle<OpLockable> h1;
 
         // check that handle cannot be locked twice
-        if (!h1.getLock())
+        if (!h1.getLock(1))
             return false;
-        if (h1.getLock())
+        if (h1.getLock(1))
             return false;
 
         // check that public lock api is available

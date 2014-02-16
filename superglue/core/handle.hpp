@@ -129,9 +129,6 @@ template<typename Options>
 class Handle_Lockable<Options, typename Options::Disable> {
     typedef typename Options::version_t version_t;
 public:
-    version_t increaseCurrentVersionNoUnlock(TaskExecutor<Options> &taskExecutor) { 
-        return increaseCurrentVersion(taskExecutor);
-    }
     version_t increaseCurrentVersion(TaskExecutor<Options> &taskExecutor) {
         HandleBase<Options> *this_(static_cast<HandleBase<Options> *>(this));
         version_t ver = Atomic::increase_nv(&this_->version);
@@ -144,12 +141,13 @@ template<typename Options>
 class Handle_Lockable<Options, typename Options::Enable> {
     template<typename, typename> friend class Handle_Contributions;
     typedef typename Options::version_t version_t;
+    typedef typename Options::lockcount_t lockcount_t;
     typedef typename Options::WaitListType TaskQueue;
 private:
     // queue of tasks waiting for the lock
     TaskQueue lockListenerList;
     // If object is locked or not
-    SpinLockAtomic dataLock;
+    lockcount_t available;
 
     // Notify lock listeners when the lock is released
     void notifyLockListeners(TaskExecutor<Options> &taskExecutor) {
@@ -170,21 +168,28 @@ private:
     }
 
 public:
-    Handle_Lockable() {}
+    Handle_Lockable() : available(1) {}
 
-    bool getLock() {
-        return dataLock.try_lock();
+    bool getLock(lockcount_t required) {
+        if (Atomic::add_nv(&available, -required) < std::numeric_limits<lockcount_t>::max()/2)
+            return true;
+
+        // someone else got in between: revert
+        Atomic::add_nv(&available, required);
+        return false;
     }
 
-    bool getLockOrNotify(TaskBase<Options> *task) {
-        if (dataLock.try_lock())
-            return true;
+    bool getLockOrNotify(lockcount_t required, TaskBase<Options> *task) {
+        if (required <= available) {
+            if (getLock(required))
+                return true;
+        }
 
         // couldn't check out lock -- add to lock listener list
         TaskQueueExclusive<TaskQueue> list(lockListenerList);
 
         // we have to make sure lock was not released here, or our listener is never woken.
-        if (dataLock.try_lock())
+        if (getLock(required))
             return true;
 
         list.push_back(task);
@@ -192,8 +197,8 @@ public:
         return false;
     }
 
-    void releaseLock(TaskExecutor<Options> &taskExecutor) {
-        dataLock.unlock();
+    void releaseLock(lockcount_t required, TaskExecutor<Options> &taskExecutor) {
+        Atomic::add_nv(&available, required);
         notifyLockListeners(taskExecutor);
     }
 
@@ -206,23 +211,11 @@ public:
         return ver;
     }
 
-    version_t increaseCurrentVersion(TaskExecutor<Options> &taskExecutor) {
-        HandleBase<Options> *this_(static_cast<HandleBase<Options> *>(this));
-
-        // first check if we owned the lock before version is increased
-        // (otherwise someone else might grab the lock in between)
-        version_t ver;
-        if (dataLock.is_locked()) {
-            dataLock.unlock();
-            // (someone else can snatch the lock here. that is ok.)
-            ver = Atomic::increase_nv(&this_->version);
-            this_->versionQueue.notifyVersionListeners(taskExecutor, this_->version);
-            notifyLockListeners(taskExecutor);
-        }
-        else {
-            ver = Atomic::increase_nv(&this_->version);
-            this_->versionQueue.notifyVersionListeners(taskExecutor, this_->version);
-        }
+    version_t increaseCurrentVersionUnlock(lockcount_t required, TaskExecutor<Options> &taskExecutor) {
+        Atomic::add_nv(&available, required);
+        // (someone else can grab the lock here. that is ok.)
+        version_t ver = increaseCurrentVersionNoUnlock(taskExecutor);
+        notifyLockListeners(taskExecutor);
         return ver;
     }
 };

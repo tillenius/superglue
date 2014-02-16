@@ -23,6 +23,7 @@ struct DefaultOptions {
     typedef unsigned int version_t;
     typedef unsigned int handleid_t;
     typedef unsigned int taskid_t;
+    typedef unsigned int lockcount_t;
     typedef DefaultHardwareModel HardwareModel;
 
     // Types that can be overloaded
