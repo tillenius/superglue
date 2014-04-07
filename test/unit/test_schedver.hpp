@@ -1,12 +1,15 @@
-#ifndef __TEST_SCHEDVER_HPP_
-#define __TEST_SCHEDVER_HPP_
+#ifndef SG_TEST_SCHEDVER_HPP_INCLUDED
+#define SG_TEST_SCHEDVER_HPP_INCLUDED
 
+#include "sg/option/access_rwc.hpp"
 #include <string>
+
+using namespace sg;
 
 class TestSchedulerVer : public TestCase {
     class ReadWriteAddMul {
     public:
-        enum Type { read = 0, write, add, mul, numAccesses };
+        enum Type { read = 0, write, add, mul, num_accesses };
         template<int n> struct AccessType {};
     };
 
@@ -25,8 +28,8 @@ class TestSchedulerVer : public TestCase {
     static bool testSchedVer(std::string &name) { name = "testSchedVer";
         SchedulerVersion<OpDefault> s;
 
-        if (s.nextVersion() != 1) return false;
-        if (s.nextVersion() != 1) return false;
+        if (s.next_version() != 1) return false;
+        if (s.next_version() != 1) return false;
 
         if (s.schedule(ReadWriteAdd::read) != 0) return false;
         if (s.schedule(ReadWriteAdd::read) != 0) return false;
@@ -37,12 +40,12 @@ class TestSchedulerVer : public TestCase {
         if (s.schedule(ReadWriteAdd::write) != 4) return false;
         if (s.schedule(ReadWriteAdd::write) != 5) return false;
 
-        if (s.nextVersion() != 7) return false;
+        if (s.next_version() != 7) return false;
 
         SchedulerVersion<OpMul> s2;
 
-        if (s2.nextVersion() != 1) return false;
-        if (s2.nextVersion() != 1) return false;
+        if (s2.next_version() != 1) return false;
+        if (s2.next_version() != 1) return false;
 
         if (s2.schedule(ReadWriteAddMul::mul) != 0) return false;
         if (s2.schedule(ReadWriteAddMul::mul) != 0) return false;
@@ -56,30 +59,30 @@ class TestSchedulerVer : public TestCase {
         if (s2.schedule(ReadWriteAddMul::write) != 6) return false;
         if (s2.schedule(ReadWriteAddMul::write) != 7) return false;
 
-        if (s2.nextVersion() != 9) return false;
+        if (s2.next_version() != 9) return false;
 
         return true;
     }
 
     static bool testAccessUtil(std::string &name) { name = "testAccessUtil";
-        if (AccessUtil<OpDefault>::needsLock(ReadWriteAdd::read)) return false;
-        if (!AccessUtil<OpDefault>::needsLock(ReadWriteAdd::add)) return false;
-        if (AccessUtil<OpDefault>::needsLock(ReadWriteAdd::write)) return false;
+        if (AccessUtil<OpDefault>::needs_lock(ReadWriteAdd::read)) return false;
+        if (!AccessUtil<OpDefault>::needs_lock(ReadWriteAdd::add)) return false;
+        if (AccessUtil<OpDefault>::needs_lock(ReadWriteAdd::write)) return false;
 
-        if (AccessUtil<OpMul>::needsLock(ReadWriteAddMul::read)) return false;
-        if (!AccessUtil<OpMul>::needsLock(ReadWriteAddMul::add)) return false;
-        if (!AccessUtil<OpMul>::needsLock(ReadWriteAddMul::mul)) return false;
-        if (AccessUtil<OpMul>::needsLock(ReadWriteAddMul::write)) return false;
+        if (AccessUtil<OpMul>::needs_lock(ReadWriteAddMul::read)) return false;
+        if (!AccessUtil<OpMul>::needs_lock(ReadWriteAddMul::add)) return false;
+        if (!AccessUtil<OpMul>::needs_lock(ReadWriteAddMul::mul)) return false;
+        if (AccessUtil<OpMul>::needs_lock(ReadWriteAddMul::write)) return false;
 
-        if (AccessUtil<OpRWC>::needsLock(ReadWriteConcurrent::read)) return false;
-        if (AccessUtil<OpRWC>::needsLock(ReadWriteConcurrent::write)) return false;
-        if (AccessUtil<OpRWC>::needsLock(ReadWriteConcurrent::concurrent)) return false;
+        if (AccessUtil<OpRWC>::needs_lock(ReadWriteConcurrent::read)) return false;
+        if (AccessUtil<OpRWC>::needs_lock(ReadWriteConcurrent::write)) return false;
+        if (AccessUtil<OpRWC>::needs_lock(ReadWriteConcurrent::concurrent)) return false;
         return true;
     }
 
 public:
 
-    std::string getName() { return "TestSchedulerVer"; }
+    std::string get_name() { return "TestSchedulerVer"; }
 
     testfunction *get(size_t &numTests) {
         static testfunction tests[] = {
@@ -110,4 +113,4 @@ template<> struct TestSchedulerVer::ReadWriteAddMul::AccessType<TestSchedulerVer
     enum { exclusive = 1 };
 };
 
-#endif // __TEST_SCHEDVER_HPP_
+#endif // SG_TEST_SCHEDVER_HPP_INCLUDED

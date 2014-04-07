@@ -1,14 +1,11 @@
-#include "superglue.hpp"
-#include "core/contrib.hpp"
-
-#include "platform/gettime.hpp"
+#include "sg/superglue.hpp"
 
 class TestCase {
 public:
     typedef bool (*testfunction)(std::string &name);
 
     virtual testfunction *get(size_t &num) = 0;
-    virtual std::string getName() = 0;
+    virtual std::string get_name() = 0;
     virtual ~TestCase() {}
 };
 
@@ -51,7 +48,7 @@ int main(int argc, char *argv[]) {
         std::vector<std::string> failed;
         std::string testname;
 
-        std::cout << modules[i]->getName() << std::flush;
+        std::cout << modules[i]->get_name() << std::flush;
         for (size_t j = 0; j < numCases; ++j) {
             if (tests[j](testname))
                 ++numSuccess;
@@ -60,7 +57,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (!failed.empty()) {
-            std::cout << " FAILED: " << modules[i]->getName() << " [" << failed[0];
+            std::cout << " FAILED: " << modules[i]->get_name() << " [" << failed[0];
             for (size_t j = 1; j < failed.size(); ++j)
                 std::cout << ", " << failed[j];
             std::cout << "]" << std::endl;

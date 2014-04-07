@@ -1,4 +1,4 @@
-#include "superglue.hpp"
+#include "sg/superglue.hpp"
 #include <iostream>
 
 const size_t numSlices = 5;
@@ -13,8 +13,8 @@ struct ScaleTask : public Task<Options> {
               double *b_, Handle<Options> &hB)
     : s(s_), a(a_), b(b_)
     {
-        registerAccess(ReadWriteAdd::read, &hA);
-        registerAccess(ReadWriteAdd::write, &hB);
+        register_access(ReadWriteAdd::read, hA);
+        register_access(ReadWriteAdd::write, hB);
     }
     void run() {
         for (size_t i = 0; i < sliceSize; ++i)
@@ -29,9 +29,9 @@ struct SumTask : public Task<Options> {
             double *c_, Handle<Options> &hC)
     : a(a_), b(b_), c(c_)
     {
-        registerAccess(ReadWriteAdd::read, &hA);
-        registerAccess(ReadWriteAdd::read, &hB);
-        registerAccess(ReadWriteAdd::write, &hC);
+        register_access(ReadWriteAdd::read, hA);
+        register_access(ReadWriteAdd::read, hB);
+        register_access(ReadWriteAdd::write, hC);
     }
     void run() {
         for (size_t i = 0; i < sliceSize; ++i)
@@ -49,14 +49,14 @@ int main() {
     // Define handles for the slices
     Handle<Options> h[numSlices];
 
-    ThreadManager<Options> tm;
-    tm.submit(new ScaleTask(2.0, data[0], h[0], data[1], h[1])); // h_1 = 2*h_0
-    tm.submit(new ScaleTask(3.0, data[0], h[0], data[2], h[2])); // h_2 = 3*h_0
-    tm.submit(new SumTask(data[0], h[0], data[1], h[1], data[3], h[3])); // h_3 = h_0+h_1
-    tm.submit(new SumTask(data[1], h[1], data[2], h[2], data[4], h[4])); // h_4 = h_1+h_2
+    SuperGlue<Options> sg;
+    sg.submit(new ScaleTask(2.0, data[0], h[0], data[1], h[1])); // h_1 = 2*h_0
+    sg.submit(new ScaleTask(3.0, data[0], h[0], data[2], h[2])); // h_2 = 3*h_0
+    sg.submit(new SumTask(data[0], h[0], data[1], h[1], data[3], h[3])); // h_3 = h_0+h_1
+    sg.submit(new SumTask(data[1], h[1], data[2], h[2], data[4], h[4])); // h_4 = h_1+h_2
 
     // Wait for all tasks to finish
-    tm.barrier();
+    sg.barrier();
 
     // The data may be accessed here, after the barrier
     std::cout << "result=[" << data[0][0] << " "  << data[1][0] << " "

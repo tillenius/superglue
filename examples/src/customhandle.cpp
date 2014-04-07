@@ -1,4 +1,4 @@
-#include "superglue.hpp"
+#include "sg/superglue.hpp"
 #include <iostream>
 
 const size_t numSlices = 5;
@@ -25,8 +25,8 @@ struct ScaleTask : public Task<Options> {
     ScaleTask(double s_, Handle<Options> &hA, Handle<Options> &hB)
     : s(s_), a(hA.index), b(hB.index)
     {
-        registerAccess(ReadWriteAdd::read, &hA);
-        registerAccess(ReadWriteAdd::write, &hB);
+        register_access(ReadWriteAdd::read, hA);
+        register_access(ReadWriteAdd::write, hB);
     }
     void run() {
         for (size_t i = 0; i < sliceSize; ++i)
@@ -41,9 +41,9 @@ struct SumTask : public Task<Options> {
             Handle<Options> &hC)
     : a(hA.index), b(hB.index), c(hC.index)
     {
-        registerAccess(ReadWriteAdd::read, &hA);
-        registerAccess(ReadWriteAdd::read, &hB);
-        registerAccess(ReadWriteAdd::write, &hC);
+        register_access(ReadWriteAdd::read, hA);
+        register_access(ReadWriteAdd::read, hB);
+        register_access(ReadWriteAdd::write, hC);
     }
     void run() {
         for (size_t i = 0; i < sliceSize; ++i)
@@ -62,14 +62,14 @@ int main() {
     for (size_t i = 0; i < numSlices; ++i)
         h[i].setIndex(i);
 
-    ThreadManager<Options> tm;
-    tm.submit(new ScaleTask(2.0, h[0], h[1])); // h_1 = 2*h_0
-    tm.submit(new ScaleTask(3.0, h[0], h[2])); // h_2 = 3*h_0
-    tm.submit(new SumTask(h[0], h[1], h[3]));  // h_3 = h_0+h_1
-    tm.submit(new SumTask(h[1], h[2], h[4]));  // h_4 = h_1+h_2
+    SuperGlue<Options> sg;
+    sg.submit(new ScaleTask(2.0, h[0], h[1])); // h_1 = 2*h_0
+    sg.submit(new ScaleTask(3.0, h[0], h[2])); // h_2 = 3*h_0
+    sg.submit(new SumTask(h[0], h[1], h[3]));  // h_3 = h_0+h_1
+    sg.submit(new SumTask(h[1], h[2], h[4]));  // h_4 = h_1+h_2
 
     // Wait for all tasks to finish
-    tm.barrier();
+    sg.barrier();
 
     // The data may be accessed here, after the barrier
     std::cout << "result=[" << data[0][0] << " "  << data[1][0] << " "

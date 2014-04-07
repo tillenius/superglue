@@ -1,5 +1,5 @@
-#ifndef __TEST_TASKQUEUE_HPP_
-#define __TEST_TASKQUEUE_HPP_
+#ifndef SG_TEST_TASKQUEUE_HPP_INCLUDED
+#define SG_TEST_TASKQUEUE_HPP_INCLUDED
 
 #include "test_taskqueue_impl.hpp"
 
@@ -18,7 +18,7 @@ class TestTaskQueue : public TestCase {
 
 public:
 
-    std::string getName() { return "TestTaskQueue"; }
+    std::string get_name() { return "TestTaskQueue"; }
 
     testfunction *get(size_t &numTests) {
         static testfunction tests[] = {
@@ -29,4 +29,4 @@ public:
     }
 };
 
-#endif // __TEST_TASKQUEUE_HPP_
+#endif // SG_TEST_TASKQUEUE_HPP_INCLUDED

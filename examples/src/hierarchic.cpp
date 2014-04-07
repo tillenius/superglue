@@ -1,10 +1,11 @@
 
-#include "superglue.hpp"
+#include "sg/superglue.hpp"
 #include <iostream>
+#include <sstream>
 
 struct Options : public DefaultOptions<Options> {};
 
-ThreadManager<Options> tm;
+SuperGlue<Options> g_sg;
 
 struct MyTask : public Task<Options> {
 
@@ -18,10 +19,10 @@ struct MyTask : public Task<Options> {
         if (end-begin >= 2) {
             int mid = begin+(end-begin+1)/2;
             if (mid - begin > 0) {
-                tm.submit(new MyTask(begin, mid));
+                g_sg.submit(new MyTask(begin, mid));
             }
             if (end - mid > 0) {
-                tm.submit(new MyTask(mid, end));
+                g_sg.submit(new MyTask(mid, end));
             }
         }
         else {
@@ -33,7 +34,7 @@ struct MyTask : public Task<Options> {
 };
 
 int main() {
-    tm.submit(new MyTask(0, 9));
-    tm.barrier();
+    g_sg.submit(new MyTask(0, 9));
+    g_sg.barrier();
     return 0;
 }

@@ -1,5 +1,5 @@
-#include "superglue.hpp"
-#include "option/instr_tasktiming.hpp"
+#include "sg/superglue.hpp"
+#include "sg/option/instr_trace.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -27,8 +27,7 @@ using namespace std;
 //===========================================================================
 struct Options : public DefaultOptions<Options> {
     typedef Enable TaskName;
-    typedef Enable Logging;
-    typedef TaskExecutorTiming<Options> TaskExecutorInstrumentation;
+    typedef Trace<Options> Instrumentation;
 };
 
 //===========================================================================
@@ -37,7 +36,7 @@ struct Options : public DefaultOptions<Options> {
 class TaskA : public Task<Options, 1> {
 public:
     TaskA(Handle<Options> &h) {
-        registerAccess(ReadWriteAdd::write, &h);
+        register_access(ReadWriteAdd::write, h);
     }
 
     void run() {
@@ -45,7 +44,7 @@ public:
         while (Time::getTime() < t + 1000000);
     }
 
-    std::string getName() { return "A"; }
+    std::string get_name() { return "A"; }
 };
 
 class TaskB : public Task<Options, 2> {
@@ -55,42 +54,42 @@ private:
 public:
     TaskB(Handle<Options> &h, Handle<Options> &h1, size_t delay_)
       : delay(delay_) {
-        registerAccess(ReadWriteAdd::read, &h);
-        registerAccess(ReadWriteAdd::write, &h1);
+        register_access(ReadWriteAdd::read, h);
+        register_access(ReadWriteAdd::write, h1);
     }
 
     void run() {
         Time::TimeUnit t = Time::getTime();
         while (Time::getTime() < t + delay);
     }
-    std::string getName() { return "B"; }
+    std::string get_name() { return "B"; }
 };
 
 class TaskD : public Task<Options, 1> {
 public:
     TaskD(Handle<Options> &h) {
-        registerAccess(ReadWriteAdd::read, &h);
+        register_access(ReadWriteAdd::read, h);
     }
 
     void run() {
         Time::TimeUnit t = Time::getTime();
         while (Time::getTime() < t + 1000000);
     }
-    std::string getName() { return "D"; }
+    std::string get_name() { return "D"; }
 };
 
 class TaskE : public Task<Options, 2> {
 public:
     TaskE(Handle<Options> &h1, Handle<Options> &h2) {
-        registerAccess(ReadWriteAdd::read, &h1);
-        registerAccess(ReadWriteAdd::read, &h2);
+        register_access(ReadWriteAdd::read, h1);
+        register_access(ReadWriteAdd::read, h2);
     }
 
     void run() {
         Time::TimeUnit t = Time::getTime();
         while (Time::getTime() < t + 1000000);
     }
-    std::string getName() { return "E"; }
+    std::string get_name() { return "E"; }
 };
 
 //===========================================================================
@@ -107,15 +106,15 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
-    ThreadManager<Options> tm(num_threads);
+    SuperGlue<Options> sg(num_threads);
     Handle<Options> a, b, c;
-    tm.submit(new TaskA(a));
-    tm.submit(new TaskB(a, b, 1000000));
-    tm.submit(new TaskB(a, c, 2000000));
-    tm.submit(new TaskD(b));
-    tm.submit(new TaskE(b, c));
-    tm.barrier();
+    sg.submit(new TaskA(a));
+    sg.submit(new TaskB(a, b, 1000000));
+    sg.submit(new TaskB(a, c, 2000000));
+    sg.submit(new TaskD(b));
+    sg.submit(new TaskE(b, c));
+    sg.barrier();
 
-    Log<Options>::dump("execution.log");
+    Trace<Options>::dump("execution.log");
     return 0;
 }

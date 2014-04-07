@@ -1,5 +1,5 @@
-#ifndef __TEST_HANDLE_HPP_
-#define __TEST_HANDLE_HPP_
+#ifndef SG_TEST_HANDLE_HPP_INCLUDED
+#define SG_TEST_HANDLE_HPP_INCLUDED
 
 #include <string>
 
@@ -29,15 +29,15 @@ class TestHandle : public TestCase {
 
     static bool testName(std::string &name) { name = "testName";
         Handle<OpName> h1, h2;
-        h1.setName("A");
-        h2.setName("B");
-        return h1.getName() == std::string("A")
-            && h2.getName() == std::string("B");
+        h1.set_name("A");
+        h2.set_name("B");
+        return h1.get_name() == std::string("A")
+            && h2.get_name() == std::string("B");
     }
 
     static bool testId(std::string &name) { name = "testId";
         Handle<OpID> h1, h2;
-        return (h1.getGlobalId() != h2.getGlobalId());
+        return (h1.get_global_id() != h2.get_global_id());
     }
 
     static bool testLockable(std::string &name) { name = "testLockable";
@@ -45,15 +45,15 @@ class TestHandle : public TestCase {
         Handle<OpLockable> h1;
 
         // check that handle cannot be locked twice
-        if (!h1.getLock(1))
+        if (!h1.get_lock(1))
             return false;
-        if (h1.getLock(1))
+        if (h1.get_lock(1))
             return false;
 
         // check that public lock api is available
-        (void) &Handle<OpLockable>::getLockOrNotify;
-        (void) &Handle<OpLockable>::releaseLock;
-        (void) &Handle<OpLockable>::increaseCurrentVersionNoUnlock;
+        (void) &Handle<OpLockable>::get_lock_or_notify;
+        (void) &Handle<OpLockable>::release_lock;
+        (void) &Handle<OpLockable>::increase_current_version_no_unlock;
 
         return true;
     }
@@ -70,7 +70,7 @@ class TestHandle : public TestCase {
     }
 
 public:
-    std::string getName() { return "TestHandle"; }
+    std::string get_name() { return "TestHandle"; }
 
     testfunction *get(size_t &numTests) {
         static testfunction tests[] = {
@@ -81,5 +81,5 @@ public:
     }
 };
 
-#endif // __TEST_HANDLE_HPP_
+#endif // SG_TEST_HANDLE_HPP_INCLUDED
 

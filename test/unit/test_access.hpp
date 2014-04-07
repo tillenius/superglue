@@ -1,5 +1,5 @@
-#ifndef __TEST_ACCESS_HPP_
-#define __TEST_ACCESS_HPP_
+#ifndef SG_TEST_ACCESS_HPP_INCLUDED
+#define SG_TEST_ACCESS_HPP_INCLUDED
 
 #include <string>
 
@@ -27,10 +27,10 @@ class TestAccess : public TestCase {
     static bool testContrib(std::string &name) { name = "testContrib";
         Access<OpContrib> h1, h2;
 
-        if (h1.useContrib()) return false;
-        h1.setUseContrib(true);
-        if (!h1.useContrib()) return false;
-        if (h2.useContrib()) return false;
+        if (h1.use_contrib()) return false;
+        h1.set_use_contrib(true);
+        if (!h1.use_contrib()) return false;
+        if (h2.use_contrib()) return false;
 
         return true;
     }
@@ -40,29 +40,29 @@ class TestAccess : public TestCase {
         Access<OpLockable> a11(&h1, 0), a12(&h1, 0);
         Access<OpLockable> a21(&h2, 0), a22(&h2, 0);
 
-        if (a11.needsLock()) return false;
+        if (a11.needs_lock()) return false;
 
         // if not needslock -- always succeeds
-        if (!a11.getLock()) return false;
-        if (!a11.getLock()) return false;
+        if (!a11.get_lock()) return false;
+        if (!a11.get_lock()) return false;
 
-        a11.setNeedsLock(true);
-        if (!a11.needsLock()) return false;
-        if (a12.needsLock()) return false;
+        a11.set_required_quantity(1);
+        if (!a11.needs_lock()) return false;
+        if (a12.needs_lock()) return false;
 
         // now needs lock -- first grab should succeed, second fail
-        if (!a11.getLock()) return false;
-        if (a11.getLock()) return false;
+        if (!a11.get_lock()) return false;
+        if (a11.get_lock()) return false;
 
 
         // different access pointing to same handle should also fail
         // but only if it needs locks
-        if (!a12.getLock()) return false;
-        if (!a12.getLock()) return false;
+        if (!a12.get_lock()) return false;
+        if (!a12.get_lock()) return false;
 
         // now should fail as a11 already has the lock
-        a12.setNeedsLock(true);
-        if (a12.getLock()) return false;
+        a12.set_required_quantity(1);
+        if (a12.get_lock()) return false;
 
         return true;
     }
@@ -74,7 +74,7 @@ class TestAccess : public TestCase {
 
 public:
 
-    std::string getName() { return "TestAccess"; }
+    std::string get_name() { return "TestAccess"; }
 
     testfunction *get(size_t &numTests) {
         static testfunction tests[] = {
@@ -85,4 +85,4 @@ public:
     }
 };
 
-#endif // __TEST_ACCESS_HPP_
+#endif // SG_TEST_ACCESS_HPP_INCLUDED

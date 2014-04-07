@@ -1,11 +1,10 @@
-#include "superglue.hpp"
+#include "sg/superglue.hpp"
+#include "sg/option/log.hpp"
 
-struct Options : public DefaultOptions<Options> {
-    typedef Enable Logging;
-};
+struct Options : public DefaultOptions<Options> {};
 
 int main() {
-    Log<Options>::registerThread(0);
+    Log<Options>::register_thread(0);
     Log<Options>::log("Test", 0, 1);
     return 0;
 }

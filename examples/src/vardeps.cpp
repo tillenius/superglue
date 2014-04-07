@@ -1,6 +1,5 @@
-#include "superglue.hpp"
-#include "core/defaults.hpp"
-#include "core/log.hpp"
+#include "sg/superglue.hpp"
+#include "sg/core/defaults.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -38,7 +37,7 @@ class InitBlock : public Task<Options, 1> {
 public:
     InitBlock(double *data_, Handle<Options> *h, size_t i, size_t j)
       : data(&data_[j*N+i]) {
-        registerAccess(ReadWriteAdd::write, &h[j*N+i]);
+        register_access(ReadWriteAdd::write, h[j*N+i]);
     }
 
     void run() {
@@ -55,8 +54,8 @@ public:
     DiagTask(double *data_, Handle<Options> *h, size_t j_)
       : data(data_), j(j_) {
         for (size_t i = 0; i < j; ++i)
-            registerAccess(ReadWriteAdd::read, &h[j*N+i]);
-        registerAccess(ReadWriteAdd::write, &h[j*N+j]);
+            register_access(ReadWriteAdd::read, h[j*N+i]);
+        register_access(ReadWriteAdd::write, h[j*N+j]);
     }
 
     void run() {
@@ -84,16 +83,16 @@ int main(int argc, char *argv[]) {
     Handle<Options> *h = new Handle<Options>[N*N];
     double *data = new double[N*N];
 
-    ThreadManager<Options> tm(num_threads);
+    SuperGlue<Options> sg(num_threads);
 
     for (size_t i = 0; i < N; ++i)
         for (size_t j = 0; j < N; ++j)
-            tm.submit(new InitBlock(data, h, i, j));
+            sg.submit(new InitBlock(data, h, i, j));
 
     for (size_t i = 0; i < N; ++i)
-        tm.submit(new DiagTask(data, h, i));
+        sg.submit(new DiagTask(data, h, i));
 
-    tm.barrier();
+    sg.barrier();
 
     for (size_t i = 0; i < N; ++i) {
         for (size_t j = 0; j < N; ++j)

@@ -1,5 +1,5 @@
-#ifndef __TEST_LISTQUEUE_HPP_
-#define __TEST_LISTQUEUE_HPP_
+#ifndef SG_TEST_LISTQUEUE_HPP_INCLUDED
+#define SG_TEST_LISTQUEUE_HPP_INCLUDED
 
 #include <string>
 
@@ -18,7 +18,7 @@ class TestListQueue : public TestCase {
     public:
         DepTask(Handle<OpPaused> &h, size_t *value_, bool *success_, size_t idx_)
          : value(value_), success(success_), idx(idx_) {
-            registerAccess(ReadWrite::write, &h);
+            register_access(ReadWrite::write, h);
         }
         void run() {
             if (*value != idx)
@@ -29,16 +29,16 @@ class TestListQueue : public TestCase {
 
     static bool testDependent(std::string &name) { name = "testDependent";
         {
-            ThreadManager<OpPaused> tm;
+            SuperGlue<OpPaused> sg;
             Handle<OpPaused> h;
             size_t value = 0;
             bool success = true;
             for (size_t i = 0; i < 1000; ++i)
-                tm.submit(new DepTask(h, &value, &success, i));
+                sg.submit(new DepTask(h, &value, &success, i));
             if (value != 0)
                 return false;
-            tm.setMayExecute(true);
-            tm.barrier();
+            sg.start_executing();
+            sg.barrier();
 
             if (value != 1000)
                 return false;
@@ -48,19 +48,19 @@ class TestListQueue : public TestCase {
         }
 
         {
-            ThreadManager<OpPaused> tm;
+            SuperGlue<OpPaused> sg;
             Handle<OpPaused> h2[1000];
             size_t value = 0;
             bool success = true;
             for (size_t i = 0; i < 1000; ++i)
-                tm.submit(new DepTask(h2[i], &value, &success, i));
+                sg.submit(new DepTask(h2[i], &value, &success, i));
             if (value != 0) {
-                tm.setMayExecute(true);
+                sg.start_executing();
                 return false;
             }
 
-            tm.setMayExecute(true);
-            tm.barrier();
+            sg.start_executing();
+            sg.barrier();
             if (value == 0)
                 return false;
             return !success;
@@ -69,7 +69,7 @@ class TestListQueue : public TestCase {
 
 public:
 
-    std::string getName() { return "TestListQueue"; }
+    std::string get_name() { return "TestListQueue"; }
 
     testfunction *get(size_t &numTests) {
         static testfunction tests[] = {
@@ -80,4 +80,4 @@ public:
     }
 };
 
-#endif // __TEST_LISTQUEUE_HPP_
+#endif // SG_TEST_LISTQUEUE_HPP_INCLUDED

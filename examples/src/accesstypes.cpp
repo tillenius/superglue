@@ -1,8 +1,9 @@
-#include "superglue.hpp"
+#include "sg/superglue.hpp"
 
 #include <cstdio>
 #include <cstdlib>
 #include <string>
+#include <sstream>
 #include <cmath>
 #include <cstddef>
 
@@ -15,7 +16,7 @@ using namespace std;
 
 class ReadWriteAddMul {
 public:
-    enum Type { read = 0, write, add, mul, numAccesses };
+    enum Type { read = 0, write, add, mul, num_accesses };
     template<int n> struct AccessType {};
 };
 
@@ -63,7 +64,7 @@ private:
     double value;
 public:
     TaskSet(double value_) : value(value_) {
-        registerAccess(ReadWriteAddMul::write, &handle);
+        register_access(ReadWriteAddMul::write, handle);
     }
 
     void run() {
@@ -72,7 +73,7 @@ public:
         ss << "=" << value << "="<<data<<" "<<std::endl;
         std::cerr << ss.str();
     }
-    std::string getName() { return "Set"; }
+    std::string get_name() { return "Set"; }
 };
 
 class TaskAdd : public Task<Options, 1> {
@@ -80,7 +81,7 @@ private:
     double value;
 public:
     TaskAdd(double value_) : value(value_) {
-        registerAccess(ReadWriteAddMul::add, &handle);
+        register_access(ReadWriteAddMul::add, handle);
     }
 
     void run() {
@@ -89,7 +90,7 @@ public:
         ss << "+" << value << "="<<data<<" "<<std::endl;
         std::cerr << ss.str();
     }
-    std::string getName() { return "Add"; }
+    std::string get_name() { return "Add"; }
 };
 
 class TaskMul : public Task<Options, 1> {
@@ -97,7 +98,7 @@ private:
     double value;
 public:
     TaskMul(double value_) : value(value_) {
-        registerAccess(ReadWriteAddMul::mul, &handle);
+        register_access(ReadWriteAddMul::mul, handle);
     }
 
     void run() {
@@ -106,21 +107,21 @@ public:
         ss << "*" << value << "="<<data<<" "<<std::endl;
         std::cerr << ss.str();
     }
-    std::string getName() { return "Mul"; }
+    std::string get_name() { return "Mul"; }
 };
 
 class TaskPrint : public Task<Options, 1> {
 private:
 public:
     TaskPrint() {
-        registerAccess(ReadWriteAddMul::read, &handle);
+        register_access(ReadWriteAddMul::read, handle);
     }
     void run() {
         std::stringstream ss;
         ss << "Result=" << data << std::endl;
         std::cerr << ss.str();
     }
-    std::string getName() { return "Print"; }
+    std::string get_name() { return "Print"; }
 };
 
 //===========================================================================
@@ -137,17 +138,17 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
-    ThreadManager<Options> tm(num_threads);
+    SuperGlue<Options> sg(num_threads);
     // 1 * 2 * 3 * 4 + 5 + 6 + 7 = 42
-    tm.submit(new TaskSet(1.0));
-    tm.submit(new TaskMul(2.0));
-    tm.submit(new TaskMul(3.0));
-    tm.submit(new TaskMul(4.0));
-    tm.submit(new TaskAdd(5.0));
-    tm.submit(new TaskAdd(6.0));
-    tm.submit(new TaskAdd(7.0));
-    tm.submit(new TaskPrint());
-    tm.barrier();
+    sg.submit(new TaskSet(1.0));
+    sg.submit(new TaskMul(2.0));
+    sg.submit(new TaskMul(3.0));
+    sg.submit(new TaskMul(4.0));
+    sg.submit(new TaskAdd(5.0));
+    sg.submit(new TaskAdd(6.0));
+    sg.submit(new TaskAdd(7.0));
+    sg.submit(new TaskPrint());
+    sg.barrier();
 
     return 0;
 }

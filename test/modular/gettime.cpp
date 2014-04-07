@@ -1,4 +1,4 @@
-#include "platform/gettime.hpp"
+#include "sg/platform/gettime.hpp"
 #include <cassert>
 
 int main() {

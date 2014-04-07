@@ -1,4 +1,4 @@
-FLAGS=-O3 -pedantic -Wall -Wno-long-long -Wconversion -I superglue/ -pthread
+FLAGS=-O3 -pedantic -Wall -Wno-long-long -Wconversion -I include/ -pthread
 
 tests: unittest modular csuperglue
 

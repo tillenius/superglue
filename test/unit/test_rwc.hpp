@@ -1,5 +1,5 @@
-#ifndef __TEST_RWC_HPP__
-#define __TEST_RWC_HPP__
+#ifndef SG_TEST_RWC_HPP_INCLUDED
+#define SG_TEST_RWC_HPP_INCLUDED
 
 class TestRWC : public TestCase {
     struct Options : public DefaultOptions<Options> {
@@ -15,7 +15,7 @@ class TestRWC : public TestCase {
     public:
         MyTask(size_t *flag_, size_t *value_, Handle<Options> &h, size_t i)
         : flag(flag_), value(value_), index(i) {
-            registerAccess(ReadWriteConcurrent::concurrent, &h);
+            register_access(ReadWriteConcurrent::concurrent, h);
         }
         void run() {
             Atomic::decrease(flag);
@@ -27,14 +27,14 @@ class TestRWC : public TestCase {
     };
 
     static bool testConcurrent(std::string &name) { name = "testConcurrent";
-        ThreadManager<Options> tm;
-        size_t num = tm.getNumQueues();
+        SuperGlue<Options> sg;
+        size_t num = (size_t) sg.get_num_cpus();
         size_t flag = num;
         std::vector<size_t> values(num);
         Handle<Options> h;
         for (size_t i = 0; i < num; ++i)
-            tm.submit(new MyTask(&flag, &values[0], h, i));
-        tm.barrier();
+            sg.submit(new MyTask(&flag, &values[0], h, i));
+        sg.barrier();
         for (size_t i = 0; i < num; ++i)
             if (values[i] != 100000)
                 return false;
@@ -43,7 +43,7 @@ class TestRWC : public TestCase {
 
 public:
 
-    std::string getName() { return "TestRWC"; }
+    std::string get_name() { return "TestRWC"; }
 
     testfunction *get(size_t &numTests) {
         static testfunction tests[] = {
@@ -54,4 +54,4 @@ public:
     }
 };
 
-#endif /* __TEST_RWC_HPP__ */
+#endif // SG_TEST_RWC_HPP_INCLUDED

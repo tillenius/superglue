@@ -1,5 +1,5 @@
-#ifndef __TEST_TASKQUEUE_IMPL_HPP__
-#define __TEST_TASKQUEUE_IMPL_HPP__
+#ifndef SG_TEST_TASKQUEUE_IMPL_HPP_INCLUDED
+#define SG_TEST_TASKQUEUE_IMPL_HPP_INCLUDED
 
 template<typename Options>
 struct TaskQueueTest {
@@ -137,4 +137,4 @@ struct TaskQueueTest {
     }
 };
 
-#endif // __TEST_TASKQUEUE_IMPL_HPP__
+#endif // SG_TEST_TASKQUEUE_IMPL_HPP_INCLUDED

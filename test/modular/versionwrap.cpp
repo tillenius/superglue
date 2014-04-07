@@ -1,6 +1,8 @@
-#include "superglue.hpp"
+#include "sg/superglue.hpp"
 
+#include "sg/platform/gettime.hpp"
 #include <limits>
+#include <cstdio>
 
 struct Options : public DefaultOptions<Options> {
   typedef unsigned char version_t;
@@ -11,11 +13,11 @@ volatile size_t busy = 0;
 struct MyTask : public Task<Options> {
   std::string name;
   MyTask(Handle<Options> &h) {
-    registerAccess(ReadWriteAdd::write, &h);
+    register_access(ReadWriteAdd::write, h);
   }
   void run() {
     if (busy != 0) {
-        fprintf(stderr, "FAIL: %d %d\n", getAccess(0).getHandle()->version, getAccess(0).requiredVersion);
+        fprintf(stderr, "FAIL: %d %d\n", get_access(0).get_handle()->version, get_access(0).required_version);
         assert(busy == 0);
     }
     busy = 1;
@@ -29,16 +31,16 @@ struct MyTask : public Task<Options> {
 int main() {
   const size_t num_tasks = std::numeric_limits<Options::version_t>::max()/2;
 
-  ThreadManager<Options> tm;
+  SuperGlue<Options> sg;
 
   Handle<Options> h;
   for (size_t i = 0; i < num_tasks/2; ++i)
-    tm.submit(new MyTask(h));
-  tm.barrier();
+    sg.submit(new MyTask(h));
+  sg.barrier();
 
   for (size_t i = 0; i < num_tasks; ++i)
-    tm.submit(new MyTask(h));
-  tm.barrier();
+    sg.submit(new MyTask(h));
+  sg.barrier();
   return 0;
 }
 

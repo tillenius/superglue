@@ -1,4 +1,4 @@
-#include "superglue.hpp"
+#include "sg/superglue.hpp"
 #include <iostream>
 
 struct Options : public DefaultOptions<Options> {
@@ -15,9 +15,9 @@ struct MyTask : public Task<Options> {
     // The run() method now takes a TaskExecutor<Options> * parameter.
     void run(TaskExecutor<Options> &te) {
         // Allocate some memory
-        int *mem1 = (int *) te.getThreadWorkspace(1024 * sizeof(int));
+        int *mem1 = (int *) te.get_thread_workspace(1024 * sizeof(int));
         // Allocate some more memory
-        int *mem2 = (int *) te.getThreadWorkspace(1024 * sizeof(int));
+        int *mem2 = (int *) te.get_thread_workspace(1024 * sizeof(int));
 
         // Fill the allocated memory
         for (int i = 0; i < 1024; ++i)
@@ -36,9 +36,9 @@ int main() {
     // Shared array divided into slices
     int res;
 
-    ThreadManager<Options> tm;
-    tm.submit(new MyTask(&res));
-    tm.barrier();
+    SuperGlue<Options> sg;
+    sg.submit(new MyTask(&res));
+    sg.barrier();
 
     // The data may be accessed here, after the barrier
     std::cout << "result=" << res << std::endl;

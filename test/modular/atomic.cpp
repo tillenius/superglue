@@ -1,5 +1,7 @@
-#include "platform/atomic.hpp"
+#include "sg/platform/atomic.hpp"
 #include <cassert>
+
+using namespace sg;
 
 int main() { 
 

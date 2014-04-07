@@ -1,5 +1,10 @@
-#ifndef __TEST_TASKS_HPP_
-#define __TEST_TASKS_HPP_
+#ifndef SG_TEST_TASKS_HPP_INCLUDED
+#define SG_TEST_TASKS_HPP_INCLUDED
+
+#include "sg/option/access_readwrite.hpp"
+
+#include "sg/platform/threads.hpp"
+#include "sg/platform/threadutil.hpp"
 
 #include <string>
 
@@ -41,27 +46,27 @@ class TestTasks : public TestCase {
 
     static bool testBarrier(std::string &name) { name = "testBarrier";
 
-        ThreadManager<OpDefault> tm;
+        SuperGlue<OpDefault> sg;
 
         size_t value = 0;
 
-        tm.barrier();
+        sg.barrier();
         for (size_t i = 0; i < 1000; ++i)
-            tm.submit(new MyTask(&value));
-        tm.barrier();
-        tm.barrier();
+            sg.submit(new MyTask(&value));
+        sg.barrier();
+        sg.barrier();
 
         return value == 1000;
     }
 
     static bool testStealing(std::string &name) { name = "testStealing";
-        ThreadManager<OpDefault> tm;
+        SuperGlue<OpDefault> sg;
         size_t value = 0;
         for (size_t i = 0; i < 100; ++i) {
-            tm.submit(new ParallelTask(&value, 0, 1), 0);
-            tm.submit(new ParallelTask(&value, 1, 0), 0);
+            sg.submit(new ParallelTask(&value, 0, 1), 0);
+            sg.submit(new ParallelTask(&value, 1, 0), 0);
         }
-        tm.barrier();
+        sg.barrier();
         return true;
     }
 
@@ -75,21 +80,21 @@ class TestTasks : public TestCase {
          : threadid(threadid_), success(success_) {}
         void run() {
             if (*threadid == 0)
-                *threadid = ThreadUtil::getCurrentThreadId();
-            else if (*threadid != ThreadUtil::getCurrentThreadId())
+                *threadid = ThreadUtil::get_current_thread_id();
+            else if (*threadid != ThreadUtil::get_current_thread_id())
                 *success = false;
         }
     };
 
     static bool testNoStealing(std::string &name) { name = "testNoStealing";
-        ThreadManager<OpNoSteal> tm;
+        SuperGlue<OpNoSteal> sg;
         ThreadIDType threadid = 0;
         bool success = true;
         for (size_t i = 0; i < 100; ++i) {
-            tm.submit(new NoStealingTask(&threadid, &success), 0);
-            tm.submit(new NoStealingTask(&threadid, &success), 0);
+            sg.submit(new NoStealingTask(&threadid, &success), 0);
+            sg.submit(new NoStealingTask(&threadid, &success), 0);
         }
-        tm.barrier();
+        sg.barrier();
         return success;
     }
 
@@ -101,7 +106,7 @@ class TestTasks : public TestCase {
     public:
         DepTask(Handle<OpPaused> &h, size_t *value_, bool *success_, size_t idx_)
          : value(value_), success(success_), idx(idx_) {
-            registerAccess(ReadWrite::write, &h);
+            register_access(ReadWrite::write, h);
         }
         void run() {
             if (*value != idx)
@@ -112,16 +117,15 @@ class TestTasks : public TestCase {
 
     static bool testDependent(std::string &name) { name = "testDependent";
         {
-            ThreadManager<OpPaused> tm;
             Handle<OpPaused> h;
+            SuperGlue<OpPaused> sg;
             size_t value = 0;
             bool success = true;
             for (size_t i = 0; i < 1000; ++i)
-                tm.submit(new DepTask(h, &value, &success, i));
-            if (value != 0)
-                return false;
-            tm.setMayExecute(true);
-            tm.barrier();
+                sg.submit(new DepTask(h, &value, &success, i));
+            assert(value == 0);
+            sg.start_executing();
+            sg.barrier();
 
             if (value != 1000)
                 return false;
@@ -131,19 +135,16 @@ class TestTasks : public TestCase {
         }
 
         {
-            ThreadManager<OpPaused> tm;
             Handle<OpPaused> h2[1000];
+            SuperGlue<OpPaused> sg;
             size_t value = 0;
             bool success = true;
             for (size_t i = 0; i < 1000; ++i)
-                tm.submit(new DepTask(h2[i], &value, &success, i));
-            if (value != 0) {
-                tm.setMayExecute(true); // must be enabled when tm is destructed
-                return false;
-            }
+                sg.submit(new DepTask(h2[i], &value, &success, i));
+            assert(value == 0);
 
-            tm.setMayExecute(true);
-            tm.barrier();
+            sg.start_executing();
+            sg.barrier();
             if (value == 0)
                 return false;
             return !success;
@@ -152,7 +153,7 @@ class TestTasks : public TestCase {
 
 public:
 
-    std::string getName() { return "TestTasks"; }
+    std::string get_name() { return "TestTasks"; }
 
     testfunction *get(size_t &numTests) {
         static testfunction tests[] = {
@@ -163,4 +164,4 @@ public:
     }
 };
 
-#endif // __TEST_TASKS_HPP_
+#endif // SG_TEST_TASKS_HPP_INCLUDED

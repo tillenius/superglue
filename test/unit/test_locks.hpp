@@ -1,18 +1,12 @@
-#ifndef __TEST_LOCKS_HPP_
-#define __TEST_LOCKS_HPP_
-
-#include "core/accesstypes.hpp"
+#ifndef SG_TEST_LOCKS_HPP_INCLUDED
+#define SG_TEST_LOCKS_HPP_INCLUDED
 
 #include <string>
 
-
 class TestLocks : public TestCase {
-    struct OpLockable : public DefaultOptions<OpLockable> {
-        typedef ReadWriteAdd AccessInfoType;
-        typedef Enable Lockable;
-    };
+    struct OpLockable : public DefaultOptions<OpLockable> {};
 
-    static const char *getName(OpLockable) { return "testLockable"; }
+    static const char *get_name(OpLockable) { return "testLockable"; }
 
     template<typename Op>
     class MyTask : public Task<Op, 1> {
@@ -21,29 +15,29 @@ class TestLocks : public TestCase {
 
     public:
         MyTask(Handle<Op> &h, size_t *value_) : value(value_) {
-            this->registerAccess(ReadWriteAdd::add, &h);
+            this->register_access(ReadWriteAdd::add, h);
         }
         void run() { *value += 1; }
     };
 
     template<typename Op>
-    static bool testLockable(std::string &name) { name = getName(Op());
+    static bool testLockable(std::string &name) { name = get_name(Op());
 
-        ThreadManager<Op> tm;
+        SuperGlue<Op> sg;
         Handle<Op> h;
 
         size_t value = 0;
 
         for (size_t i = 0; i < 1000; ++i)
-            tm.submit(new MyTask<Op>(h, &value));
-        tm.barrier();
+            sg.submit(new MyTask<Op>(h, &value));
+        sg.barrier();
 
         return value == 1000;
     }
 
 public:
 
-    std::string getName() { return "TestLocks"; }
+    std::string get_name() { return "TestLocks"; }
 
     testfunction *get(size_t &numTests) {
         static testfunction tests[] = {
@@ -54,5 +48,5 @@ public:
     }
 };
 
-#endif // __TEST_LOCKS_HPP_
+#endif // SG_TEST_LOCKS_HPP_INCLUDED
 

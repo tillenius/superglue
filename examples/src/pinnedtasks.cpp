@@ -1,4 +1,4 @@
-#include "superglue.hpp"
+#include "sg/superglue.hpp"
 #include <iostream>
 
 ThreadIDType id = 0;
@@ -11,8 +11,8 @@ struct Options : public DefaultOptions<Options> {
 struct MyTask : public Task<Options> {
     void run() {
         if (id == 0)
-            id = ThreadUtil::getCurrentThreadId();
-        if (id != ThreadUtil::getCurrentThreadId()) {
+            id = ThreadUtil::get_current_thread_id();
+        if (id != ThreadUtil::get_current_thread_id()) {
             std::cerr << "Task running on wrong thread" << std::endl;
             exit(0);
         }
@@ -21,17 +21,17 @@ struct MyTask : public Task<Options> {
 
 int main() {
 
-    ThreadManager<Options> tm;
+    SuperGlue<Options> sg;
 
     for (int i = 0; i < 1000; ++i)
-        tm.submit(new MyTask(), 0); // all tasks added to readyqueue 0
+        sg.submit(new MyTask(), 0); // all tasks added to readyqueue 0
 
     // No tasks will be executed yet
 
-    tm.setMayExecute(true); // allow tasks to be executed
+    sg.start_executing();
 
     // Wait for all tasks to finish
-    tm.barrier();
+    sg.barrier();
 
     return 0;
 }

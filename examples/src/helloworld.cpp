@@ -1,4 +1,4 @@
-#include "superglue.hpp"
+#include "sg/superglue.hpp"
 #include <iostream>
 
 struct Options : public DefaultOptions<Options> {};
@@ -10,8 +10,8 @@ struct MyTask : public Task<Options> {
 };
 
 int main() {
-    ThreadManager<Options> tm;
-    tm.submit(new MyTask());
+    SuperGlue<Options> sg;
+    sg.submit(new MyTask());
     return 0;
 }
 

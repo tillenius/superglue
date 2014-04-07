@@ -1,4 +1,4 @@
-#include "superglue.hpp"
+#include "sg/superglue.hpp"
 
 #include <limits>
 
@@ -7,7 +7,7 @@ struct Options : public DefaultOptions<Options> {
 };
 
 int main() {
-    ThreadManager<Options> tm;
+    SuperGlue<Options> sg;
     return 0;
 }
 

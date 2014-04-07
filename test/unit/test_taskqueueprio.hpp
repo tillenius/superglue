@@ -1,10 +1,12 @@
-#ifndef __TEST_TASKQUEUEPRIO_HPP_
-#define __TEST_TASKQUEUEPRIO_HPP_
+#ifndef SG_TEST_TASKQUEUEPRIO_HPP_INCLUDED
+#define SG_TEST_TASKQUEUEPRIO_HPP_INCLUDED
 
 #include "test_taskqueue_impl.hpp"
-#include "option/taskqueue_prio.hpp"
+#include "sg/option/taskqueue_prio.hpp"
 
 #include <string>
+
+using namespace sg;
 
 class TestTaskQueuePrio : public TestCase {
     struct OpDefault : public DefaultOptions<OpDefault> {
@@ -12,13 +14,13 @@ class TestTaskQueuePrio : public TestCase {
         typedef TaskQueuePrio<OpDefault> WaitListType;
     };
 
-    struct LowPrioTask : public TaskBase<OpDefault> {
+    struct LowPrioTask : public Task<OpDefault> {
         std::string name;
         LowPrioTask(std::string name_) : name(name_) {}
         void run() {}
     };
 
-    struct HighPrioTask : public TaskBase<OpDefault> {
+    struct HighPrioTask : public Task<OpDefault> {
         std::string name;
         HighPrioTask(std::string name_) : name(name_) {
             is_prioritized = true;
@@ -35,7 +37,7 @@ class TestTaskQueuePrio : public TestCase {
     }
 
     static bool testPrio(std::string &name) { name = "testTaskQueuePrio";
-        typedef typename OpDefault::ReadyListType::unsafe_t TaskQueueUnsafe;
+        typedef OpDefault::ReadyListType::unsafe_t TaskQueueUnsafe;
 
         TaskQueueUnsafe q;
 
@@ -87,7 +89,7 @@ class TestTaskQueuePrio : public TestCase {
 
 public:
 
-    std::string getName() { return "TestTaskQueuePrio"; }
+    std::string get_name() { return "TestTaskQueuePrio"; }
 
     testfunction *get(size_t &numTests) {
         static testfunction tests[] = {
@@ -98,4 +100,4 @@ public:
     }
 };
 
-#endif // __TEST_TASKQUEUEPRIO_HPP_
+#endif // SG_TEST_TASKQUEUEPRIO_HPP_INCLUDED

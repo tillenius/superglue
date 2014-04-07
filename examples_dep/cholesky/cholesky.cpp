@@ -1,6 +1,3 @@
-#ifndef __TEST_CHOLESKY_HPP_
-#define __TEST_CHOLESKY_HPP_
-
 //
 // Cholesky example using MKL.
 //
@@ -34,12 +31,11 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "superglue.hpp"
-#include "hardwaremodel.hpp"
-#include "option/instr_tasktiming.hpp"
+#include "sg/superglue.hpp"
+#include "sg/option/instr_trace.hpp"
 
 #ifdef USE_PRIO
-#include "option/taskqueue_prio.hpp"
+#include "sg/option/taskqueue_prio.hpp"
 #endif
 
 #include <math.h>
@@ -71,10 +67,8 @@ struct MyHandle : public HandleBase<Options> {
 //   * Enable logging (generate execution trace)
 // ==========================================================================
 struct Options : public DefaultOptions<Options> {
-    typedef LocalHardwareModel HardwareModel;
     typedef MyHandle<Options> HandleType;
-    typedef Enable Logging;
-    typedef TaskExecutorTiming<Options> TaskExecutorInstrumentation;
+    typedef Trace<Options> Instrumentation;
     typedef Enable TaskName;
 #ifdef USE_PRIO
     typedef TaskQueuePrioUnsafe<Options> TaskQueueUnsafeType;
@@ -86,15 +80,15 @@ struct Options : public DefaultOptions<Options> {
 // ==========================================================================
 struct gemm : public Task<Options, 3> {
     gemm(Handle<Options> &h1, Handle<Options> &h2, Handle<Options> &h3) {
-        registerAccess(ReadWriteAdd::read, &h1);
-        registerAccess(ReadWriteAdd::read, &h2);
-        registerAccess(ReadWriteAdd::write, &h3);
+        register_access(ReadWriteAdd::read, h1);
+        register_access(ReadWriteAdd::read, h2);
+        register_access(ReadWriteAdd::write, h3);
     }
     void run() {
 
-        double *a(Adata[getAccess(0).getHandle()->geti()*DIM + getAccess(0).getHandle()->getj()]);
-        double *b(Adata[getAccess(1).getHandle()->geti()*DIM + getAccess(1).getHandle()->getj()]);
-        double *c(Adata[getAccess(2).getHandle()->geti()*DIM + getAccess(2).getHandle()->getj()]);
+        double *a(Adata[get_access(0).get_handle()->geti()*DIM + get_access(0).get_handle()->getj()]);
+        double *b(Adata[get_access(1).get_handle()->geti()*DIM + get_access(1).get_handle()->getj()]);
+        double *c(Adata[get_access(2).get_handle()->geti()*DIM + get_access(2).get_handle()->getj()]);
 
 #ifdef USE_MKL
         int nb=NB;
@@ -105,13 +99,13 @@ struct gemm : public Task<Options, 3> {
         dgemm('N', 'T', NB, NB, NB, -1.0, a, NB, b, NB, 1.0, c, NB);
 #endif
     }
-    std::string getName() { return "gemm"; }
+    std::string get_name() { return "gemm"; }
 };
 
 struct syrk : public Task<Options, 2> {
     syrk(Handle<Options> &h1, Handle<Options> &h2) {
-        registerAccess(ReadWriteAdd::read, &h1);
-        registerAccess(ReadWriteAdd::write, &h2);
+        register_access(ReadWriteAdd::read, h1);
+        register_access(ReadWriteAdd::write, h2);
 
 #ifdef USE_PRIO
 	is_prioritized = true;
@@ -120,8 +114,8 @@ struct syrk : public Task<Options, 2> {
     }
     void run() {
 
-        double *a(Adata[getAccess(0).getHandle()->geti()*DIM + getAccess(0).getHandle()->getj()]);
-        double *c(Adata[getAccess(1).getHandle()->geti()*DIM + getAccess(1).getHandle()->getj()]);
+        double *a(Adata[get_access(0).get_handle()->geti()*DIM + get_access(0).get_handle()->getj()]);
+        double *c(Adata[get_access(1).get_handle()->geti()*DIM + get_access(1).get_handle()->getj()]);
 #ifdef USE_MKL
         int nb = NB;
         double DONE=1.0, DMONE=-1.0;
@@ -131,12 +125,12 @@ struct syrk : public Task<Options, 2> {
         dsyrk('L', 'N', NB, NB, -1.0, a, NB, 1.0, c, NB);
 #endif
     }
-    std::string getName() { return "syrk"; }
+    std::string get_name() { return "syrk"; }
 };
 
 struct potrf : public Task<Options, 1> {
     potrf(Handle<Options> &h1) {
-        registerAccess(ReadWriteAdd::write, &h1);
+        register_access(ReadWriteAdd::write, h1);
 
 #ifdef USE_PRIO
 	is_prioritized = true;
@@ -144,7 +138,7 @@ struct potrf : public Task<Options, 1> {
 
     }
     void run() {
-        double *a(Adata[getAccess(0).getHandle()->geti()*DIM + getAccess(0).getHandle()->getj()]);
+        double *a(Adata[get_access(0).get_handle()->geti()*DIM + get_access(0).get_handle()->getj()]);
         int info = 0;
 #ifdef USE_MKL
         int nb = NB;
@@ -154,13 +148,13 @@ struct potrf : public Task<Options, 1> {
         dpotrf('L', NB, a, NB, &info);
 #endif
     }
-    std::string getName() { return "potrf"; }
+    std::string get_name() { return "potrf"; }
 };
 
 struct trsm : public Task<Options, 2> {
     trsm(Handle<Options> &h1, Handle<Options> &h2) {
-        registerAccess(ReadWriteAdd::read, &h1);
-        registerAccess(ReadWriteAdd::write, &h2);
+        register_access(ReadWriteAdd::read, h1);
+        register_access(ReadWriteAdd::write, h2);
 
 #ifdef USE_PRIO
         is_prioritized = true;
@@ -168,8 +162,8 @@ struct trsm : public Task<Options, 2> {
 
     }
     void run() {
-        double *a(Adata[getAccess(0).getHandle()->geti()*DIM + getAccess(0).getHandle()->getj()]);
-        double *b(Adata[getAccess(1).getHandle()->geti()*DIM + getAccess(1).getHandle()->getj()]);
+        double *a(Adata[get_access(0).get_handle()->geti()*DIM + get_access(0).get_handle()->getj()]);
+        double *b(Adata[get_access(1).get_handle()->geti()*DIM + get_access(1).get_handle()->getj()]);
 #ifdef USE_MKL
         double DONE=1.0;
         int nb = NB;
@@ -179,7 +173,7 @@ struct trsm : public Task<Options, 2> {
         dtrsm('R', 'L', 'T', 'N', NB, NB, 1.0, a, NB, b, NB);
 #endif
     }
-    std::string getName() { return "trsm"; }
+    std::string get_name() { return "trsm"; }
 };
 
 // ==========================================================================
@@ -187,7 +181,7 @@ struct trsm : public Task<Options, 2> {
 // ==========================================================================
 static void cholesky(const int num_threads, const size_t numBlocks) {
 
-    ThreadManager<Options> tm(num_threads);
+    SuperGlue<Options> sg(num_threads);
 
     Handle<Options> **A = new Handle<Options>*[numBlocks];
     for (size_t i = 0; i < numBlocks; ++i)
@@ -202,27 +196,27 @@ static void cholesky(const int num_threads, const size_t numBlocks) {
         for (size_t k = 0; k < j; k++) {
             for (size_t i = j+1; i < numBlocks; i++) {
                 // A[i,j] = A[i,j] - A[i,k] * (A[j,k])^t
-                tm.submit(new gemm(A[i][k], A[j][k], A[i][j]));
+                sg.submit(new gemm(A[i][k], A[j][k], A[i][j]));
             }
         }
         for (size_t i = 0; i < j; i++) {
             // A[j,j] = A[j,j] - A[j,i] * (A[j,i])^t
-            tm.submit(new syrk(A[j][i], A[j][j]));
+            sg.submit(new syrk(A[j][i], A[j][j]));
         }
 
         // Cholesky Factorization of A[j,j]
-        tm.submit(new potrf(A[j][j]));
+        sg.submit(new potrf(A[j][j]));
 
         for (size_t i = j+1; i < numBlocks; i++) {
             // A[i,j] <- A[i,j] = X * (A[j,j])^t
-            tm.submit(new trsm(A[j][j], A[i][j]));
+            sg.submit(new trsm(A[j][j], A[i][j]));
         }
     }
 
-    tm.wait(&A[numBlocks-1][numBlocks-1]);
+    sg.wait(A[numBlocks-1][numBlocks-1]);
 
     Time::TimeUnit t2 = Time::getTime();
-    std::cout << "#cores=" << tm.getNumQueues()
+    std::cout << "#cores=" << sg.get_num_cpus()
               << " #blocks=" << numBlocks << "x" << numBlocks
               << " blocksize=" << NB << "x" << NB
               << " time=" << (t2-t1) << " cycles" << std::endl;
@@ -308,8 +302,6 @@ int main(int argc, char *argv[]) {
 
     cholesky(num_workers, DIM);
 
-    Log<Options>::dump("execution.log");
+    Options::Instrumentation::dump("execution.log");
     return 0;
 }
-
-#endif // __TEST_CHOLESKY_HPP_

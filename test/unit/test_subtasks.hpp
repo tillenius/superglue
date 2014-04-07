@@ -1,5 +1,5 @@
-#ifndef __TEST_SUBTASKS_HPP__
-#define __TEST_SUBTASKS_HPP__
+#ifndef SG_TEST_SUBTASKS_HPP_INCLUDED
+#define SG_TEST_SUBTASKS_HPP_INCLUDED
 
 #include <string>
 
@@ -35,7 +35,7 @@ class TestSubtasks : public TestCase {
 
         struct BigTask : public Task<Options> {
             BigTask(Handle<Options> &h) {
-                registerAccess(ReadWriteAdd::write, &h);
+                register_access(ReadWriteAdd::write, h);
             }
             void run(TaskExecutor<Options> &te) {
                 r.store(0);
@@ -48,7 +48,7 @@ class TestSubtasks : public TestCase {
 
         struct NextTask : public Task<Options> {
             NextTask(Handle<Options> &h) {
-                registerAccess(ReadWriteAdd::write, &h);
+                register_access(ReadWriteAdd::write, h);
             }
             void run(TaskExecutor<Options> &te) {
                 r.store(5);
@@ -57,12 +57,12 @@ class TestSubtasks : public TestCase {
         };
 
 
-        ThreadManager<Options> tm;
+        SuperGlue<Options> sg;
         Handle<Options> h;
 
-        tm.submit(new BigTask(h));
-        tm.submit(new NextTask(h)); // may start before bigtasks subtasks are finished
-        tm.barrier();
+        sg.submit(new BigTask(h));
+        sg.submit(new NextTask(h)); // may start before bigtasks subtasks are finished
+        sg.barrier();
 
         assert(r.order[0] == 0);
         assert(r.order[1] == 5);
@@ -89,7 +89,7 @@ class TestSubtasks : public TestCase {
 
         struct BigTask : public Task<Options> {
             BigTask(Handle<Options> &h) {
-                registerAccess(ReadWriteAdd::write, &h);
+                register_access(ReadWriteAdd::write, h);
             }
             void run(TaskExecutor<Options> &te) {
                 r.store(0);
@@ -104,7 +104,7 @@ class TestSubtasks : public TestCase {
 
         struct NextTask : public Task<Options> {
             NextTask(Handle<Options> &h) {
-                registerAccess(ReadWriteAdd::write, &h);
+                register_access(ReadWriteAdd::write, h);
             }
             void run(TaskExecutor<Options> &te) {
                 r.store(5);
@@ -112,12 +112,12 @@ class TestSubtasks : public TestCase {
         };
 
 
-        ThreadManager<Options> tm;
+        SuperGlue<Options> sg;
         Handle<Options> h;
 
-        tm.submit(new BigTask(h));
-        tm.submit(new NextTask(h)); // must wait on BigTask
-        tm.barrier();
+        sg.submit(new BigTask(h));
+        sg.submit(new NextTask(h)); // must wait on BigTask
+        sg.barrier();
 
         assert(r.order[0] == 0);
         assert(r.order[5] == 5);
@@ -131,7 +131,7 @@ class TestSubtasks : public TestCase {
 
 public:
 
-    std::string getName() { return "TestSubtasks"; }
+    std::string get_name() { return "TestSubtasks"; }
 
     testfunction *get(size_t &numTests) {
         static testfunction tests[] = {
@@ -142,4 +142,4 @@ public:
     }
 };
 
-#endif // __TEST_SUBTASKS_HPP__
+#endif // SG_TEST_SUBTASKS_HPP_INCLUDED

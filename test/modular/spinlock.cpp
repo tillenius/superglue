@@ -1,5 +1,7 @@
-#include "platform/spinlock.hpp"
+#include "sg/core/spinlock.hpp"
 #include <cassert>
+
+using namespace sg;
 
 int main() {
     SpinLock sl;
@@ -31,13 +33,6 @@ int main() {
         assert(sl.is_locked());
     }
     assert(!sl.is_locked());
-
-    {
-        SpinLockScopedReleasable lock(sl);
-        assert(sl.is_locked());
-        lock.release();
-        assert(!sl.is_locked());
-    }
 
     return 0;
 }

@@ -1,4 +1,4 @@
-#include "platform/perfcount.hpp"
+#include "sg/platform/perfcount.hpp"
 
 #include <cassert>
 

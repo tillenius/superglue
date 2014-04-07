@@ -2,11 +2,12 @@ extern "C" {
 #include "csuperglue.h"
 }
 
-#include "superglue.hpp"
+#include "sg/superglue.hpp"
 
 #ifdef SG_LOGGING
-#include "option/instr_tasktiming.hpp"
+#include "sg/option/instr_trace.hpp"
 #endif
+#include "sg/platform/gettime.hpp"
 
 #include <cassert>
 #include <map>
@@ -15,13 +16,12 @@ extern "C" {
 
 struct Options : public DefaultOptions<Options> {
 #ifdef SG_LOGGING
-    typedef Enable Logging;
     typedef Enable TaskName;
-    typedef TaskExecutorTiming<Options> TaskExecutorInstrumentation;
+    typedef Trace<Options> Instrumentation;
 #endif
 };
 
-ThreadManager<Options> *superglue;
+SuperGlue<Options> *superglue;
 
 class CTaskBase : public Task<Options> {
 protected:
@@ -50,7 +50,7 @@ public:
         memcpy(args, args_, argsize);
     }
     virtual ~CTask() { delete [] (char *) args; }
-    std::string getName() { return name; }
+    std::string get_name() { return name; }
 };
 
 class CInplaceTask : public CTaskBase {
@@ -59,7 +59,7 @@ protected:
 public:
     CInplaceTask(sg_task_function function, void *args, const char *name_)
     : CTaskBase(function, args), name(name_ == NULL ? "" : name_) {}
-    std::string getName() { return name; }
+    std::string get_name() { return name; }
 };
 
 #else // SG_LOGGING
@@ -94,7 +94,7 @@ extern "C" sg_task_t sg_create_inplace_task(sg_task_function function, void *arg
 extern "C" void sg_register_access(sg_task_t task_, enum sg_access_type type, sg_handle_t handle_) {
     CTask *task((CTask *) task_);
     Handle<Options> *handle((Handle<Options> *) handle_);
-    task->registerAccess((ReadWriteAdd::Type) (type-1), handle);
+    task->register_access((ReadWriteAdd::Type) (type-1), *handle);
 }
 
 extern "C" void sg_submit_task(sg_task_t task_) {
@@ -114,7 +114,7 @@ extern "C" void sg_submit(sg_task_function function, void *args, size_t argsize,
             break;
         Handle<Options> *handle = va_arg(deps, Handle<Options> *);
 
-        task->registerAccess((ReadWriteAdd::Type) (type-1), handle);
+        task->register_access((ReadWriteAdd::Type) (type-1), *handle);
     }
     va_end(deps);
     superglue->submit(task);
@@ -132,14 +132,14 @@ extern "C" void sg_submit_inplace(sg_task_function function, void *args, const c
             break;
         Handle<Options> *handle = va_arg(deps, Handle<Options> *);
 
-        task->registerAccess((ReadWriteAdd::Type) (type-1), handle);
+        task->register_access((ReadWriteAdd::Type) (type-1), *handle);
     }
     va_end(deps);
     superglue->submit(task);
 }
 
 extern "C" void sg_wait(sg_handle_t handle) {
-    superglue->wait((Handle<Options> *) handle);
+    superglue->wait(*(Handle<Options> *) handle);
 }
 
 extern "C" void sg_barrier() {
@@ -160,7 +160,7 @@ extern "C" void sg_destroy_handles(sg_handle_t *handles, int num) {
 }
 
 extern "C" void sg_init() {
-    superglue = new ThreadManager<Options>();
+    superglue = new SuperGlue<Options>();
 }
 
 extern "C" void sg_destroy() {
@@ -168,7 +168,9 @@ extern "C" void sg_destroy() {
 }
 
 extern "C" void sg_write_log(const char *filename) {
-    Log<Options>::dump(filename);
+#ifdef SG_LOGGING
+    Options::Instrumentation::dump(filename);
+#endif
 }
 
 extern "C" unsigned long long sg_get_time() {
@@ -176,5 +178,7 @@ extern "C" unsigned long long sg_get_time() {
 }
 
 extern "C" void sg_log(const char *name, unsigned long long start, unsigned long long stop) {
+#ifdef SG_LOGGING
     Log<Options>::log(name, start, stop);
+#endif
 }

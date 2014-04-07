@@ -1,7 +1,7 @@
-#include "superglue.hpp"
+#include "sg/superglue.hpp"
+#include "sg/option/instr_trace.hpp"
+#include "sg/option/savedag_data.hpp"
 #include <iostream>
-#include "option/instr_tasktiming.hpp"
-#include "option/log_dag_data.hpp"
 
 template<typename Options>
 struct MyTaskBase : public TaskBaseDefault<Options> {
@@ -18,14 +18,12 @@ struct MyTaskBase : public TaskBaseDefault<Options> {
 };
 
 struct Options : public DefaultOptions<Options> {
-    typedef Enable ThreadSafeSubmit; // this really should be the default
-    typedef Enable Logging_DAG;
     typedef Enable TaskId;
     typedef Enable HandleId;
     typedef Enable TaskName;
     typedef Enable HandleName;
-    typedef Enable Logging;
-    typedef TaskExecutorTiming<Options> TaskExecutorInstrumentation;
+    typedef Trace<Options> Instrumentation;
+    typedef SaveDAG<Options> LogDAG;
     typedef MyTaskBase<Options> TaskBaseType;
 };
 
@@ -39,12 +37,12 @@ struct gemm : public Task<Options> {
     gemm(size_t addedby_, Handle<Options> &a, Handle<Options> &b, Handle<Options> &c,
          size_t i_, size_t j_) : i(i_), j(j_) {
         addedby = addedby_;
-        registerAccess(ReadWriteAdd::read, &a);
-        registerAccess(ReadWriteAdd::read, &b);
-        registerAccess(ReadWriteAdd::add, &c);
+        register_access(ReadWriteAdd::read, a);
+        register_access(ReadWriteAdd::read, b);
+        register_access(ReadWriteAdd::add, c);
     }
     void run() { delay(2000000); }
-    std::string getName() {
+    std::string get_name() {
         std::stringstream ss;
         ss << "gemm("<<i<<","<<j<<")";
         return ss.str();
@@ -55,11 +53,11 @@ struct syrk : public Task<Options> {
     size_t i;
     syrk(size_t addedby_, Handle<Options> &a, Handle<Options> &b, size_t i_) : i(i_) {
         addedby = addedby_;
-        registerAccess(ReadWriteAdd::read, &a);
-        registerAccess(ReadWriteAdd::add, &b);
+        register_access(ReadWriteAdd::read, a);
+        register_access(ReadWriteAdd::add, b);
     }
     void run() { delay(1000000); }
-    std::string getName() {
+    std::string get_name() {
         std::stringstream ss;
         ss << "syrk("<<i<<","<<i<<")";
         return ss.str();
@@ -69,10 +67,10 @@ struct potrf : public Task<Options> {
     size_t i;
     potrf(size_t addedby_, Handle<Options> &a, size_t i_) : i(i_) {
         addedby = addedby_;
-        registerAccess(ReadWriteAdd::write, &a);
+        register_access(ReadWriteAdd::write, a);
     }
     void run() { delay(1000000); }
-    std::string getName() {
+    std::string get_name() {
         std::stringstream ss;
         ss << "potrf("<<i<<","<<i<<")";
         return ss.str();
@@ -83,11 +81,11 @@ struct trsm : public Task<Options> {
     trsm(size_t addedby_, Handle<Options> &a, Handle<Options> &b,
          size_t i_, size_t j_) : i(i_), j(j_) {
         addedby = addedby_;
-        registerAccess(ReadWriteAdd::read, &a);
-        registerAccess(ReadWriteAdd::write, &b);
+        register_access(ReadWriteAdd::read, a);
+        register_access(ReadWriteAdd::write, b);
     }
     void run() { delay(1000000); }
-    std::string getName() {
+    std::string get_name() {
         std::stringstream ss;
         ss << "trsm("<<i<<","<<j<<")";
         return ss.str();
@@ -98,15 +96,15 @@ struct trsm : public Task<Options> {
 struct propagate : public Task<Options> {
     size_t index, i, j;
 
-    propagate(size_t addedby_, Handle<Options> *src, Handle<Options> *dst, size_t index_,
+    propagate(size_t addedby_, Handle<Options> &src, Handle<Options> &dst, size_t index_,
               size_t i_, size_t j_)
     : index(index_), i(i_), j(j_) {
         addedby = addedby_;
-        registerAccess(ReadWriteAdd::read, src);
+        register_access(ReadWriteAdd::read, src);
         fulfill(ReadWriteAdd::write, dst, 0);
     }
     void run() {}
-    std::string getName() {
+    std::string get_name() {
         std::stringstream ss;
         ss << "prop(" << i << "," << j << ")_from_" << index << "_to_" << index+1;
         return ss.str();
@@ -116,21 +114,21 @@ struct propagate : public Task<Options> {
 
 
 struct bigtask : public Task<Options> {
-    ThreadManager<Options> &tm;
+    SuperGlue<Options> &sg;
     size_t numBlocks;
     size_t index;
     Handle<Options> *h;
 
 // <HIDE INSIDE TASK LIBRARY>
-    void promise(Handle<Options> *h) {
+    void promise(Handle<Options> &h) {
         // updates the next-available-version of the handle
-        h->schedule(ReadWriteAdd::write);
+        h.schedule(ReadWriteAdd::write);
     }
 // </HIDE INSIDE TASK LIBRARY>
 
-    bigtask(ThreadManager<Options> &tm_,
+    bigtask(SuperGlue<Options> &sg_,
             size_t numBlocks_, size_t index_, Handle<Options> *h_)
-    : tm(tm_), numBlocks(numBlocks_), index(index_), h(h_) {
+    : sg(sg_), numBlocks(numBlocks_), index(index_), h(h_) {
 
         // make a promise that someone will update these handles at some point
         // in the future, but dont automatically update them when this task is
@@ -140,7 +138,7 @@ struct bigtask : public Task<Options> {
 
         for (size_t i = index+1; i < numBlocks; ++i)
             for (size_t j = index+1; j <= i; ++j)
-                promise(&h[ (index+1)*numBlocks*numBlocks + i*numBlocks + j]);
+                promise(h[ (index+1)*numBlocks*numBlocks + i*numBlocks + j]);
 
         // in this solution i dont have major and minor version numbers like
         //   "1.1", "1.2", ..., "2.1", "2.2", ...
@@ -161,13 +159,13 @@ struct bigtask : public Task<Options> {
 
         // cholesky factorization of A[k,k]
 
-        tm.submit(new potrf(index, A[k*numBlocks + k], k));
+        sg.submit(new potrf(index, A[k*numBlocks + k], k));
 
         // update panel
 
         for (size_t m = k+1; m < numBlocks; ++m) {
             // A[m,k] <- A[m,k] = X * (A[k,k])^t
-            tm.submit(new trsm(index, A[k*numBlocks + k],
+            sg.submit(new trsm(index, A[k*numBlocks + k],
                                A[m*numBlocks + k], m, k));
         }
 
@@ -176,12 +174,12 @@ struct bigtask : public Task<Options> {
         for (size_t n = k+1; n < numBlocks; ++n) {
 
             // A[n,n] = A[n,n] - A[n,k] * (A[n,n])^t
-            tm.submit(new syrk(index, A[n*numBlocks + k],
+            sg.submit(new syrk(index, A[n*numBlocks + k],
                                A[n*numBlocks + n], n));
 
             for (size_t m = n+1; m < numBlocks; ++m) {
                 // A[m,n] = A[m,n] - A[m,k] * (A[n,k])^t
-                tm.submit(new gemm(index, A[m*numBlocks + k],
+                sg.submit(new gemm(index, A[m*numBlocks + k],
                                    A[n*numBlocks + k],
                                    A[m*numBlocks + n], m, n));
             }
@@ -194,8 +192,8 @@ struct bigtask : public Task<Options> {
         // allow handles to have nested version numbers.
         for (size_t i = index+1; i < numBlocks; ++i) {
             for (size_t j = index+1; j <= i; ++j) {
-                tm.submit(new propagate(index,&A[i*numBlocks + j],
-                                        &h[(index+1)*numBlocks*numBlocks + i*numBlocks + j],
+                sg.submit(new propagate(index, A[i*numBlocks + j],
+                                        h[(index+1)*numBlocks*numBlocks + i*numBlocks + j],
                                         index, i, j));
 
             }
@@ -203,7 +201,7 @@ struct bigtask : public Task<Options> {
 // </HIDE INSIDE TASK LIBRARY>
     }
 
-    std::string getName() {
+    std::string get_name() {
         std::stringstream ss;
         ss << "bigtask(" << index << ")";
         return ss.str();
@@ -223,20 +221,20 @@ int main() {
             for (size_t j = 0; j < numBlocks; ++j) {
                 std::stringstream ss;
                 ss<<k<<":("<<i<<","<<j<<")";
-                A[k*numBlocks*numBlocks + i*numBlocks + j].setName(ss.str().c_str());
+                A[k*numBlocks*numBlocks + i*numBlocks + j].set_name(ss.str().c_str());
             }
         }
     }
 
-    ThreadManager<Options> tm;
+    SuperGlue<Options> sg;
 
     // create bigtasks
     for (size_t i = 0; i < numBlocks; ++i)
-        tm.submit(new bigtask(tm, numBlocks, i, A));
-    tm.barrier();
+        sg.submit(new bigtask(sg, numBlocks, i, A));
+    sg.barrier();
 
-    Log<Options>::dump("log.log");
-    Log_DAG_data<Options>::dump("cholesky_data.dot");
+    Trace<Options>::dump("log.log");
+    SaveDAG_data<Options>::dump("cholesky_data.dot");
 
     return 0;
 }

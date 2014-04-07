@@ -1,7 +1,7 @@
-#ifndef __TEST_DEQUETASKQUEUE_HPP_
-#define __TEST_DEQUETASKQUEUE_HPP_
+#ifndef SG_TEST_DEQUETASKQUEUE_HPP_INCLUDED
+#define SG_TEST_DEQUETASKQUEUE_HPP_INCLUDED
 
-#include "option/taskqueue_deque.hpp"
+#include "sg/option/taskqueue_deque.hpp"
 #include "test_taskqueue_impl.hpp"
 
 #include <string>
@@ -21,7 +21,7 @@ class TestTaskQueueDeque : public TestCase {
 
 public:
 
-    std::string getName() { return "TestTaskQueueDeque"; }
+    std::string get_name() { return "TestTaskQueueDeque"; }
 
     testfunction *get(size_t &numTests) {
         static testfunction tests[] = {
@@ -32,4 +32,4 @@ public:
     }
 };
 
-#endif // __TEST_DEQUETASKQUEUE_HPP_
+#endif // SG_TEST_DEQUETASKQUEUE_HPP_INCLUDED

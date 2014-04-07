@@ -1,5 +1,6 @@
-#include "superglue.hpp"
+#include "sg/superglue.hpp"
 #include <iostream>
+#include <sstream>
 
 template<typename Options>
 struct MyHandle : public HandleBase<Options> {
@@ -7,20 +8,17 @@ struct MyHandle : public HandleBase<Options> {
 };
 
 struct Options : public DefaultOptions<Options> {
-    // This option must be enabled in order to make task submission thread safe
-    typedef Enable ThreadSafeSubmit;
-
     // This changes the handle to contain data
     typedef MyHandle<Options> HandleType;
 };
 
-ThreadManager<Options> tm;
+SuperGlue<Options> g_sg;
 
 struct Producer : public Task<Options> {
     Handle<Options> *out;
 
     Producer(Handle<Options> *out_) : out(out_) {
-        registerAccess(ReadWriteAdd::write, out);
+        register_access(ReadWriteAdd::write, *out);
     }
 
     void run() {
@@ -32,7 +30,7 @@ struct Producer : public Task<Options> {
 struct ConsumeAndDelete : public Task<Options> {
     Handle<Options> *in;
     ConsumeAndDelete(Handle<Options> *in_) : in(in_) {
-        registerAccess(ReadWriteAdd::write, in); // register as write
+        register_access(ReadWriteAdd::write, *in); // register as write
     }
     void run() {
         std::stringstream ss;
@@ -51,7 +49,7 @@ struct Consumer : public Task<Options> {
     Handle<Options> *in;
 
     Consumer(Handle<Options> *in_) : in(in_) {
-        registerAccess(ReadWriteAdd::read, in);
+        register_access(ReadWriteAdd::read, *in);
     }
     void run() {
         std::stringstream ss;
@@ -64,7 +62,7 @@ struct Consumer : public Task<Options> {
 struct Deleter : public Task<Options> {
     Handle<Options> *in;
     Deleter(Handle<Options> *in_) : in(in_) {
-        registerAccess(ReadWriteAdd::write, in);
+        register_access(ReadWriteAdd::write, *in);
     }
     void run() {
         std::stringstream ss;
@@ -81,24 +79,24 @@ struct OuterTask : public Task<Options> {
     void run() {
         {
             Handle<Options> *temp(new Handle<Options>());
-            tm.submit(new Producer(temp));
-            tm.submit(new ConsumeAndDelete(temp));
+            g_sg.submit(new Producer(temp));
+            g_sg.submit(new ConsumeAndDelete(temp));
         }
 
         {
             Handle<Options> *temp(new Handle<Options>());
-            tm.submit(new Producer(temp));
-            tm.submit(new Consumer(temp));
-            tm.submit(new Consumer(temp));
-            tm.submit(new Consumer(temp));
-            tm.submit(new Deleter(temp));
+            g_sg.submit(new Producer(temp));
+            g_sg.submit(new Consumer(temp));
+            g_sg.submit(new Consumer(temp));
+            g_sg.submit(new Consumer(temp));
+            g_sg.submit(new Deleter(temp));
         }
     }
 };
 
 int main() {
     for (size_t i(0); i != 10; ++i)
-        tm.submit(new OuterTask());
-    tm.barrier();
+        g_sg.submit(new OuterTask());
+    g_sg.barrier();
     return 0;
 }

@@ -1,8 +1,5 @@
 
-FLAGS=-O3 -pedantic -Wall -Wno-long-long -I ../../superglue -pthread
-
-MKL_ROOT=/opt/intel/mkl
-ACML_ROOT=/opt/acml5.3.1
+FLAGS=-O3 -pedantic -Wall -Wno-long-long -I ../../include -pthread
 
 ifneq ("$(wildcard $(MKL_ROOT)/lib/intel64/libmkl_core.a)","")
 
@@ -32,6 +29,7 @@ cholesky_acml: cholesky.cpp Makefile
 endif
 
 cholesky:
-	@echo "### Warning: could not find MKL or ACML. Edit Makefile to correct path."
+	@echo "### Warning: could not find MKL or ACML. Neither MKL_ROOT nor ACML_ROOT set."
 	@echo "Skipping Cholesky example."
 
+.PHONY: cholesky

@@ -27,12 +27,12 @@ An example where a single, independent task is created and executed:
     };
     
     int main() {
-        // The ThreadManager object starts the run-time system and starts
+        // The SuperGlue object starts the run-time system and starts
         // as many worker threads as there are cores.
-        ThreadManager<Options> tm;
+        SuperGlue<Options> sg;
     
         // Create a task and submit it to SuperGlue
-        tm.submit(new MyTask());
+        sg.submit(new MyTask());
     
         return 0;
     }

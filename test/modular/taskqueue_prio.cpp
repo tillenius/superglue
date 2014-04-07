@@ -1,6 +1,6 @@
-#include "superglue.hpp"
+#include "sg/superglue.hpp"
 
-#include "option/taskqueue_prio.hpp"
+#include "sg/option/taskqueue_prio.hpp"
 
 struct Options : public DefaultOptions<Options> {
     typedef TaskQueuePrio<Options> ReadyListType;
@@ -8,6 +8,6 @@ struct Options : public DefaultOptions<Options> {
 };
 
 int main() {
-  ThreadManager<Options> tm;
+  SuperGlue<Options> sg;
   return 0;
 }

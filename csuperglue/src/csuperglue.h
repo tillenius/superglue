@@ -1,5 +1,5 @@
-#ifndef __CSUPERGLUE_H__
-#define __CSUPERGLUE_H__
+#ifndef SG_CSUPERGLUE_H_INCLUDED
+#define SG_CSUPERGLUE_H_INCLUDED
 
 #include "stddef.h"
 
@@ -63,4 +63,4 @@ void sg_log(const char *name, unsigned long long start, unsigned long long stop)
 }
 #endif
 
-#endif /* __CSUPERGLUE_H__ */
+#endif /* SG_CSUPERGLUE_H_INCLUDED */
