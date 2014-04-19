@@ -35,7 +35,7 @@
 The following example uses SuperGlue to execute a single, independent task:
 
 <pre class="prettyprint">
-#include "superglue.hpp"
+#include "sg/superglue.hpp"
 #include &lt;iostream&gt;
 
 struct Options : public DefaultOptions&lt;Options&gt; {};
@@ -47,15 +47,15 @@ struct MyTask : public Task&lt;Options&gt; {
 };
 
 int main() {
-    ThreadManager&lt;Options&gt; tm;
-    tm.submit(new MyTask());
+    SuperGlue&lt;Options&gt; sg;
+    sg.submit(new MyTask());
     return 0;
 }
 </pre>
 
 Compile with
 <pre>
-g++ -I $(SUPERGLUE)/superglue/ helloworld.cpp -pthread
+g++ -I $(SUPERGLUE)/include helloworld.cpp -pthread
 </pre>
 where <tt>$(SUPERGLUE)</tt> is replaced with the path to where SuperGlue
 was downloaded.
@@ -67,17 +67,21 @@ First, the SuperGlue header file is included:
 #include "superglue.hpp"
 </pre>
 
+<br>
+
 SuperGlue is designed to be customizable, and this is implemented by
 having an Options struct that is a template parameter to most classes.
 In this example, the default options are used, and the Options struct is defined by
 <pre class="prettyprint">
 struct Options : public DefaultOptions&lt;Options&gt; {};
 </pre>
-Tasks are classes that inherits the <tt>Task&lt;Options&gt;</tt> class, and provide a
-<tt>run()</tt> method. Tasks also need a constructor where all accessed shared
-data structures are registered, but the task in this example has no
-dependencies, why no constructor is needed. The task is defined by
 
+<br>
+
+Tasks are classes that inherits the <tt>Task&lt;Options&gt;</tt> class, and provide a
+<tt>run()</tt> method. Tasks typically register which shared data structures
+they access in the constructor. The task in this example has no
+dependencies, why no constructor is needed. The task is defined by
 <pre class="prettyprint">
 struct MyTask : public Task&lt;Options&gt; {
     void run() {
@@ -86,21 +90,27 @@ struct MyTask : public Task&lt;Options&gt; {
 };
 </pre>
 
+<br>
+
 The run-time system and the worker threads is started by instantiating
-an object of the ThreadManager class, like this:
+an object of the SuperGlue class, like this:
 <pre class="prettyprint">
-ThreadManager&lt;Options&gt; tm;
+SuperGlue&lt;Options&gt; sg;
 </pre>
 This will create one worker thread per available core, except for one
-which is reserved for the main thread. It is also possible to specify
-the number of worker threads to start as an argument to the constructor.
-To set the number of worker threads explicitly to 3 (for a total of 4 threads),
+which is reserved for the main thread.
+
+<p></p>
+
+It is also possible to specify how many CPUs to use as an argument to the constructor.
+To limit the number of cores used to 4 (main thread plus three workers),
 the run-time system is started like this:
 <pre class="prettyprint">
 ThreadManager&lt;Options&gt; tm(3);
 </pre>
-To submit tasks to SuperGlue, one uses the <tt>submit()</tt> method
-in the ThreadManager
+<p><em>WARNING: This number must be less or equal to the number of available CPUs.</em></p>
+
+Tasks are submitted to SuperGlue using the <tt>submit()</tt> method:
 <pre class="prettyprint">
 tm.submit(new MyTask());
 </pre>
@@ -123,7 +133,7 @@ in a flexible and efficient way. The following code is an example with task
 dependencies.
 
 <pre class="prettyprint">
-#include "superglue.hpp"
+#include "sg/superglue.hpp"
 #include &lt;iostream&gt;
 
 const size_t numSlices = 5;
@@ -139,8 +149,8 @@ struct ScaleTask : public Task&lt;Options&gt; {
               double *b_, Handle&lt;Options&gt; &amp;hB)
     : s(s_), a(a_), b(b_)
     {
-        registerAccess(ReadWriteAdd::read, &amp;hA);
-        registerAccess(ReadWriteAdd::write, &amp;hB);
+        register_access(ReadWriteAdd::read, &amp;hA);
+        register_access(ReadWriteAdd::write, &amp;hB);
     }
     void run() {
         for (size_t i = 0; i &lt; sliceSize; ++i)
@@ -156,9 +166,9 @@ struct SumTask : public Task&lt;Options&gt; {
             double *c_, Handle&lt;Options&gt; &amp;hC)
     : a(a_), b(b_), c(c_)
     {
-        registerAccess(ReadWriteAdd::read, &amp;hA);
-        registerAccess(ReadWriteAdd::read, &amp;hB);
-        registerAccess(ReadWriteAdd::write, &amp;hC);
+        register_access(ReadWriteAdd::read, &amp;hA);
+        register_access(ReadWriteAdd::read, &amp;hB);
+        register_access(ReadWriteAdd::write, &amp;hC);
     }
     void run() {
         for (size_t i = 0; i &lt; sliceSize; ++i)
@@ -175,14 +185,14 @@ int main() {
     // Define handles for the slices
     Handle&lt;Options&gt; h[numSlices];
 
-    ThreadManager&lt;Options&gt; tm;
-    tm.submit(new ScaleTask(2.0, data[0], h[0], data[1], h[1]));         // h_1 = 2*h_0
-    tm.submit(new ScaleTask(3.0, data[0], h[0], data[2], h[2]));         // h_2 = 3*h_0
-    tm.submit(new SumTask(data[0], h[0], data[1], h[1], data[3], h[3])); // h_3 = h_0+h_1
-    tm.submit(new SumTask(data[1], h[1], data[2], h[2], data[4], h[4])); // h_4 = h_1+h_2
+    SuperGlue&lt;Options&gt; sg;
+    sg.submit(new ScaleTask(2.0, data[0], h[0], data[1], h[1]));         // h_1 = 2*h_0
+    sg.submit(new ScaleTask(3.0, data[0], h[0], data[2], h[2]));         // h_2 = 3*h_0
+    sg.submit(new SumTask(data[0], h[0], data[1], h[1], data[3], h[3])); // h_3 = h_0+h_1
+    sg.submit(new SumTask(data[1], h[1], data[2], h[2], data[4], h[4])); // h_4 = h_1+h_2
 
     // Wait for all tasks to finish
-    tm.barrier();
+    sg.barrier();
 
     // The data may be accessed here, after the barrier
     std::cout &lt;&lt; "result=[" &lt;&lt; data[0][0] &lt;&lt; " "  &lt;&lt; data[1][0] &lt;&lt; " "
@@ -198,19 +208,23 @@ example above, one handle is created per slice of the vector <tt>data</tt>:
 <pre class="prettyprint">
 Handle&lt;Options&gt; h[numSlices];
 </pre>
+
+<br>
+
 SuperGlue does not know about the connection between handles and which
 variables they protect. This allows handles to be used for representing anything.
 
-<p>
+<p></p>
+
 The handles are sent along when constructing the tasks that use the
 corresponding data. In the constructor, the task must register that it
 accesses the handle, and if it reads or writes the data. The registration
 in <tt>ScaleTask</tt> is performed in the following two lines:
-</p>
 <pre class="prettyprint">
-registerAccess(ReadWriteAdd::read, &amp;hA);
-registerAccess(ReadWriteAdd::write, &amp;hB);
+register_access(ReadWriteAdd::read, &amp;hA);
+register_access(ReadWriteAdd::write, &amp;hB);
 </pre>
+
 Here, <tt>ReadWriteAdd</tt> is the default class of access types,
 which defines three different access types:
 <ul>
@@ -220,7 +234,7 @@ which defines three different access types:
 </ul>
 The data-flow in this example can be illustrated by the following graph:
 <center>
-<embed src="dag1.svg" type="image/svg+xml" />
+<embed src="images/dag1.svg" type="image/svg+xml" />
 </center>
 From this graph it can be seen that the task computing <tt>h[3]</tt> can start
 as soon as <tt>h[1]</tt> is available, while the task computing <tt>h[4]</tt>
