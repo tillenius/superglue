@@ -1,4 +1,3 @@
-
 FLAGS=-O3 -pedantic -Wall -Wno-long-long -I ../../include -pthread
 
 ifneq ("$(wildcard $(MKL_ROOT)/lib/intel64/libmkl_core.a)","")

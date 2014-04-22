@@ -35,7 +35,7 @@ protected:
     }
 
 public:
-    void notify_version_listeners(TaskExecutor<Options> &task_executor, version_t version) {
+    void notify_version_listeners(TaskQueueUnsafe &woken, version_t version) {
 
         for (;;) {
             TaskQueueUnsafe list;
@@ -64,7 +64,7 @@ public:
             Options::DependencyChecking::check_at_wakeup(list);
 
             if (!list.empty())
-                task_executor.push_front_list(list); // destroys list
+                woken.push_front_list(list);
         }
     }
 };

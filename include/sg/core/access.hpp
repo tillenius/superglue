@@ -9,7 +9,6 @@ namespace sg {
 template<typename Options> class Access;
 template<typename Options> class Handle;
 template<typename Options> class TaskBase;
-template<typename Options> class TaskExecutor;
 
 namespace detail {
 
@@ -49,15 +48,18 @@ template<typename Options>
 class Access_Lockable<Options, typename Options::Disable> {
     typedef typename Options::version_t version_t;
     typedef typename Options::lockcount_t lockcount_t;
+    typedef typename Options::WaitListType TaskQueue;
+    typedef typename TaskQueue::unsafe_t TaskQueueUnsafe;
+
 public:
     static bool get_lock() { return true; }
     static bool needs_lock() { return false; }
-    static void release_lock(TaskExecutor<Options> &) {}
+    static void release_lock(TaskQueueUnsafe &) {}
     static bool get_lock_or_notify(TaskBase<Options> *) { return true; }
     static void set_required_quantity(lockcount_t required_) {}
-    version_t finished(TaskExecutor<Options> &taskExecutor) {
+    version_t finished(TaskQueueUnsafe &woken) {
         const Access<Options> *this_(static_cast<const Access<Options> *>(this));
-        return this_->handle->increase_current_version(taskExecutor);
+        return this_->handle->increase_current_version(woken);
     }
 };
 
@@ -65,6 +67,8 @@ template<typename Options>
 class Access_Lockable<Options, typename Options::Enable> {
     typedef typename Options::lockcount_t lockcount_t;
     typedef typename Options::version_t version_t;
+    typedef typename Options::WaitListType TaskQueue;
+    typedef typename TaskQueue::unsafe_t TaskQueueUnsafe;
 private:
     lockcount_t required;
 public:
@@ -90,24 +94,24 @@ public:
     }
 
     // Low level interface to unlock when failed to lock several objects
-    void release_lock(TaskExecutor<Options> &taskExecutor) const {
+    void release_lock(TaskQueueUnsafe &woken) const {
         if (required == 0)
             return;
 
         const Access<Options> *this_(static_cast<const Access<Options> *>(this));
-        this_->handle->release_lock(required, taskExecutor);
+        this_->handle->release_lock(required, woken);
     }
 
 public:
     void set_required_quantity(lockcount_t required_) { required = required_; }
     bool needs_lock() const { return required != 0; }
-    version_t finished(TaskExecutor<Options> &taskExecutor) {
+    version_t finished(TaskQueueUnsafe &woken) {
         const Access<Options> *this_(static_cast<const Access<Options> *>(this));
         version_t ver;
         if (this_->use_contrib())
-            ver = this_->handle->increase_current_version_no_unlock(taskExecutor);
+            ver = this_->handle->increase_current_version_no_unlock(woken);
         else
-            ver = this_->handle->increase_current_version_unlock(required, taskExecutor);
+            ver = this_->handle->increase_current_version_unlock(required, woken);
         return ver;
     }
 };

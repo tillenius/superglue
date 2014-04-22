@@ -112,15 +112,19 @@ template<typename Options, typename T = typename Options::Subtasks> class TaskEx
 
 template<typename Options>
 class TaskExecutor_Subtasks<Options, typename Options::Disable> {
+    typedef typename Options::ReadyListType TaskQueue;
+    typedef typename TaskQueue::unsafe_t TaskQueueUnsafe;
 public:
-    void finished(TaskBase<Options> *task) {
+    void finished(TaskBase<Options> *task, TaskQueueUnsafe &woken) {
         TaskExecutor<Options> *this_(static_cast<TaskExecutor<Options> *>(this));
-        this_->release_task(task);
+        this_->release_task(task, woken);
     }
 };
 
 template<typename Options>
 class TaskExecutor_Subtasks<Options, typename Options::Enable> {
+    typedef typename Options::ReadyListType TaskQueue;
+    typedef typename TaskQueue::unsafe_t TaskQueueUnsafe;
 public:
     void subtask(TaskBase<Options> *parent, TaskBase<Options> *task) {
         TaskExecutor<Options> *this_(static_cast<TaskExecutor<Options> *>(this));
@@ -133,7 +137,7 @@ public:
         this_->submit_front(task);
     }
 
-    void finished(TaskBase<Options> *task) {
+    void finished(TaskBase<Options> *task, TaskQueueUnsafe &woken) {
         TaskExecutor<Options> *this_(static_cast<TaskExecutor<Options> *>(this));
 
         if (task->subtask_count != 0) {
@@ -142,7 +146,7 @@ public:
                 return;
         }
 
-        this_->release_task(task);
+        this_->release_task(task, woken);
 
         TaskBase<Options> *current_parent = task->parent;
         while (current_parent != NULL) {
@@ -153,7 +157,7 @@ public:
 
             // release parent and continue to parent's parent
             TaskBase<Options> *next_parent = current_parent->parent;
-            this_->release_task(current_parent);
+            this_->release_task(current_parent, woken);
             current_parent = next_parent;
         }
 
@@ -176,8 +180,8 @@ class TaskExecutorBase
     template<typename, typename> friend class TaskExecutor_Stealing;
     template<typename, typename> friend class TaskExecutor_PassThreadId;
     typedef typename Options::ThreadingManagerType ThreadingManager;
-    typedef typename Options::ReadyListType TaskQueue;
     typedef typename Options::version_t version_t;
+    typedef typename Options::ReadyListType TaskQueue;
     typedef typename TaskQueue::unsafe_t TaskQueueUnsafe;
 
 private:
@@ -212,14 +216,24 @@ public:
         }
     }
 
-    void invoke_task(TaskBase<Options> *task) {
+    void invoke_task(TaskBase<Options> *task, TaskQueueUnsafe &woken) {
+        // book-keeping
+        detail::TaskExecutor_GetThreadWorkspace<Options>::reset_workspace();
+        apply_old_contribs(task);
+
+        // push woken tasks to the ready queue, so other threads can steal while we work
+        if (!woken.empty()) {
+            push_front_list(woken);
+            TaskQueueUnsafe().swap(woken);
+        }
+
         Options::Instrumentation::run_task_before(task);
 
         detail::TaskExecutor_PassTaskExecutor<Options>::invoke_task_impl(task);
 
         Options::Instrumentation::run_task_after(task);
 
-        detail::TaskExecutor_Subtasks<Options>::finished(task);
+        detail::TaskExecutor_Subtasks<Options>::finished(task, woken);
     }
 
     bool run_contrib(TaskBase<Options> *task) {
@@ -244,27 +258,25 @@ public:
         }
     }
 
-    bool try_lock(TaskBase<Options> *task) {
-        TaskExecutor<Options> *this_(static_cast<TaskExecutor<Options> *>(this));
+    bool try_lock(TaskBase<Options> *task, TaskQueueUnsafe &woken) {
 
         const size_t num_access = task->get_num_access();
         Access<Options> *access(task->get_access());
         for (size_t i = 0; i < num_access; ++i) {
             if (!access[i].get_lock_or_notify(task)) {
                 for (size_t j = 0; j < i; ++j)
-                    access[i-j-1].release_lock(*this_);
+                    access[i-j-1].release_lock(woken);
                 return false;
             }
         }
         return true;
     }
 
-    void release_task(TaskBase<Options> *task) {
-        TaskExecutor<Options> *this_(static_cast<TaskExecutor<Options> *>(this));
+    void release_task(TaskBase<Options> *task, TaskQueueUnsafe &woken) {
         const size_t num_access = task->get_num_access();
         Access<Options> *access(task->get_access());
         for (size_t i = num_access; i > 0; --i) {
-            version_t ver = access[i-1].finished(*this_);
+            version_t ver = access[i-1].finished(woken);
             Options::LogDAG::task_finish(task, access[i-1].get_handle(), ver);
         }
         Options::FreeTask::free(task);
@@ -296,33 +308,33 @@ public:
     }
 
     // Called from this thread only
-    bool execute_tasks() {
+    bool execute_tasks(TaskQueueUnsafe &woken) {
         for (;;) {
-            TaskBase<Options> *task = get_task_internal();
-            if (task == 0) {
-                Atomic::yield();
-                return false;
+            TaskBase<Options> *task;
+
+            if (!woken.pop_front(task)) {
+                task = get_task_internal();
+                if (task == 0) {
+                    Atomic::yield();
+                    return false;
+                }
             }
 
             if (!Options::DependencyChecking::check_before_execution(task))
                 continue;
 
-            // book-keeping
-            detail::TaskExecutor_GetThreadWorkspace<Options>::reset_workspace();
-            apply_old_contribs(task);
-
             // run with contributions, if that is activated
             if (run_contrib(task)) {
-                invoke_task(task);
+                invoke_task(task, woken);
                 return true;
             }
 
             // lock if needed
-            if (!try_lock(task))
+            if (!try_lock(task, woken))
                 continue;
 
             // run
-            invoke_task(task);
+            invoke_task(task, woken);
             return true;
         }
     }
@@ -336,8 +348,10 @@ public:
     void work_loop() {
         TaskExecutor<Options> *this_(static_cast<TaskExecutor<Options> *>(this));
         for (;;) {
-
-            while (execute_tasks());
+            {
+                TaskQueueUnsafe woken;
+                while (execute_tasks(woken));
+            }
 
             tman.barrier_protocol.wait_at_barrier(*this_);
 

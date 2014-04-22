@@ -11,6 +11,9 @@ template <typename Options>
 class BarrierProtocol {
 private:
     typedef typename Options::ThreadingManagerType ThreadingManager;
+    typedef typename Options::ReadyListType TaskQueue;
+    typedef typename TaskQueue::unsafe_t TaskQueueUnsafe;
+
     ThreadingManager &tm;
     char padding1[Options::CACHE_LINE_SIZE];
     size_t barrier_counter; // written by everybody, read by main thread
@@ -168,7 +171,11 @@ public:
     // cannot be invoked by more than one thread at a time
     void barrier(TaskExecutor<Options> &te) {
         tm.start_executing();
-        while (te.execute_tasks());
+
+        {
+            TaskQueueUnsafe woken;
+            while (te.execute_tasks(woken));
+        }
 
         const size_t num_workers(tm.get_num_cpus()-1);
 
@@ -176,7 +183,10 @@ public:
             return;
 
         for (;;) {
-            while (te.execute_tasks());
+            {
+                TaskQueueUnsafe woken;
+                while (te.execute_tasks(woken));
+            }
 
             barrier_counter = num_workers;
             abort = 0;
@@ -198,7 +208,12 @@ public:
                 const int local_abort(abort);
                 if (local_abort == 1 || !te.get_task_queue().empty_safe()) {
                     while (state != 0) {
-                        while (te.execute_tasks());
+
+                        {
+                            TaskQueueUnsafe woken;
+                            while (te.execute_tasks(woken));
+                        }
+
                         Atomic::compiler_fence();
                     }
                     break;

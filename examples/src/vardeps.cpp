@@ -18,7 +18,7 @@ using namespace std;
 // element with the sum of all elements to the left of the diagonal.
 //
 // This is just an example of how to create tasks with variable number of
-// dependencies. The tasks are too small to run efficient.
+// dependencies. The tasks are too small to run efficiently.
 //
 
 const size_t N = 6;

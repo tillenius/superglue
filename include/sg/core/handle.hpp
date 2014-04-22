@@ -14,7 +14,6 @@ template<typename Options> class Handle;
 template<typename Options> class HandleBase;
 template<typename Options> class SchedulerVersion;
 template<typename Options> class TaskBase;
-template<typename Options> class TaskExecutor;
 template<typename Options> class VersionQueue;
 template<typename Options> class VersionQueueExclusive;
 
@@ -134,11 +133,14 @@ template<typename Options, typename T = typename Options::Lockable> class Handle
 template<typename Options>
 class Handle_Lockable<Options, typename Options::Disable> {
     typedef typename Options::version_t version_t;
+    typedef typename Options::WaitListType TaskQueue;
+    typedef typename TaskQueue::unsafe_t TaskQueueUnsafe;
+
 public:
-    version_t increase_current_version(TaskExecutor<Options> &task_executor) {
+    version_t increase_current_version(TaskQueueUnsafe &woken) {
         HandleBase<Options> *this_(static_cast<HandleBase<Options> *>(this));
         version_t ver = Atomic::increase_nv(&this_->version);
-        this_->version_queue.notify_version_listeners(task_executor, this_->version);
+        this_->version_queue.notify_version_listeners(woken, this_->version);
         return ver;
     }
 };
@@ -149,6 +151,8 @@ class Handle_Lockable<Options, typename Options::Enable> {
     typedef typename Options::version_t version_t;
     typedef typename Options::lockcount_t lockcount_t;
     typedef typename Options::WaitListType TaskQueue;
+    typedef typename TaskQueue::unsafe_t TaskQueueUnsafe;
+
 private:
     // queue of tasks waiting for the lock
     TaskQueue lock_listener_list;
@@ -157,8 +161,7 @@ protected:
     lockcount_t available;
 
     // Notify lock listeners when the lock is released
-    void notify_lock_listeners(TaskExecutor<Options> &task_executor) {
-        typedef typename TaskQueue::unsafe_t TaskQueueUnsafe;
+    void notify_lock_listeners(TaskQueueUnsafe &woken) {
 
         TaskQueueUnsafe wake;
         {
@@ -169,7 +172,7 @@ protected:
             list.swap(wake);
         }
 
-        task_executor.push_front_list(wake); // destroys wake
+        woken.push_front_list(wake);
     }
 
 public:
@@ -202,25 +205,25 @@ public:
         return false;
     }
 
-    void release_lock(lockcount_t required, TaskExecutor<Options> &task_executor) {
+    void release_lock(lockcount_t required, TaskQueueUnsafe &woken) {
         Atomic::add_nv(&available, required);
-        notify_lock_listeners(task_executor);
+        notify_lock_listeners(woken);
     }
 
     // for contributions that haven't actually got the lock
-    version_t increase_current_version_no_unlock(TaskExecutor<Options> &task_executor) {
+    version_t increase_current_version_no_unlock(TaskQueueUnsafe &woken) {
         Handle<Options> *this_(static_cast<Handle<Options> *>(this));
 
         version_t ver = Atomic::increase_nv(&this_->version);
-        this_->version_queue.notify_version_listeners(task_executor, this_->get_current_version());
+        this_->version_queue.notify_version_listeners(woken, this_->get_current_version());
         return ver;
     }
 
-    version_t increase_current_version_unlock(lockcount_t required, TaskExecutor<Options> &task_executor) {
+    version_t increase_current_version_unlock(lockcount_t required, TaskQueueUnsafe &woken) {
         Atomic::add_nv(&available, required);
         // (someone else can grab the lock here. that is ok.)
-        version_t ver = increase_current_version_no_unlock(task_executor);
-        notify_lock_listeners(task_executor);
+        version_t ver = increase_current_version_no_unlock(woken);
+        notify_lock_listeners(woken);
         return ver;
     }
 };

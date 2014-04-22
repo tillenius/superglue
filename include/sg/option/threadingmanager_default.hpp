@@ -52,7 +52,7 @@ private:
     };
 
     SpinLock lock_workers_initialized;
-    size_t start_counter;
+    int start_counter;
     char padding1[Options::CACHE_LINE_SIZE];
     int num_cpus;
     std::vector<WorkerThread *> workerthreads;

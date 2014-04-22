@@ -85,6 +85,7 @@ class SuperGlue
     template<typename, typename> friend class SuperGlue_PauseExecution;
     typedef typename Options::ReadyListType TaskQueue;
     typedef typename Options::ThreadingManagerType ThreadingManager;
+    typedef typename TaskQueue::unsafe_t TaskQueueUnsafe;
 
 private:
     SuperGlue(const SuperGlue &);
@@ -118,10 +119,7 @@ public:
             delete tman;
     }
 
-    int get_num_cpus() {
-        static const int num_cpus( tman->get_num_cpus() );
-        return num_cpus;
-    }
+    int get_num_cpus() { return tman->get_num_cpus(); }
 
     // USER INTERFACE {
 
@@ -141,10 +139,13 @@ public:
     }
 
     void wait(HandleBase<Options> &handle) {
+        TaskQueueUnsafe woken;
         while (handle.next_version()-1 != handle.get_current_version()) {
-            main_task_executor->execute_tasks();
-            Atomic::rep_nop(); // to reload the handle versions
+            main_task_executor->execute_tasks(woken);
+            Atomic::compiler_fence(); // to reload the handle versions
         }
+        if (!woken.empty())
+            main_task_executor->push_front_list(woken);
     }
 
     // }
