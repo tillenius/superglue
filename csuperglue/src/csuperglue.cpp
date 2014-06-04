@@ -15,6 +15,7 @@ extern "C" {
 #include <stdarg.h>
 
 struct Options : public DefaultOptions<Options> {
+    typedef Enable PauseExecution;
 #ifdef SG_LOGGING
     typedef Enable TaskName;
     typedef Trace<Options> Instrumentation;
@@ -161,6 +162,15 @@ extern "C" void sg_destroy_handles(sg_handle_t *handles, int num) {
 
 extern "C" void sg_init() {
     superglue = new SuperGlue<Options>();
+    superglue->start_executing();
+}
+
+extern "C" void sg_init_paused() {
+    superglue = new SuperGlue<Options>();
+}
+
+extern "C" void sg_execute() {
+    superglue->start_executing();
 }
 
 extern "C" void sg_destroy() {

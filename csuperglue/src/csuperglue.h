@@ -12,8 +12,13 @@ typedef void *sg_task_t;
 typedef void (*sg_task_function)(void *);
 enum sg_access_type { sg_read = 1, sg_add, sg_write };
 
-/* Initialize SuperGlue. Starts worker threads */
+/* Initialize SuperGlue. Starts worker threads. */
 void sg_init();
+
+/* Initialize SuperGlue. Starts worker threads, but do not run any tasks yet. */
+void sg_init_paused();
+/* Start running tasks. (If initialized via sg_init_paused()) */
+void sg_execute();
 
 /* Shut down SuperGlue */
 void sg_destroy();
