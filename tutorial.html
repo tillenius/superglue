@@ -103,16 +103,16 @@ which is reserved for the main thread.
 <p></p>
 
 It is also possible to specify how many CPUs to use as an argument to the constructor.
-To limit the number of cores used to 4 (main thread plus three workers),
+To limit the number of CPUs used to 4 (main thread plus three workers),
 the run-time system is started like this:
 <pre class="prettyprint">
-ThreadManager&lt;Options&gt; tm(3);
+SuperGlue&lt;Options&gt; sg(4);
 </pre>
 <p><em>WARNING: This number must be less or equal to the number of available CPUs.</em></p>
 
 Tasks are submitted to SuperGlue using the <tt>submit()</tt> method:
 <pre class="prettyprint">
-tm.submit(new MyTask());
+sg.submit(new MyTask());
 </pre>
 <p>
 When a task has been submitted to SuperGlue, the ownership (that is, the
@@ -121,7 +121,7 @@ to SuperGlue.
 </p>
 
 <p>
-When the ThreadManager object falls out of scope, there will be an
+When the SuperGlue object falls out of scope, there will be an
 implied barrier that waits for all tasks to finish, and the worker
 threads will then be terminated.
 </p>
@@ -334,7 +334,7 @@ to change.</p>
 on specified worker threads. This can be used to gain control over which task
 is executed where, for experiments. Also, tasks are not allowed to execute as
 soon as they are submitted, but instead must wait until
-<tt>setMayExecute()</tt> is called.</p>
+<tt>start_executing()</tt> is called.</p>
 
 <h3>examples/subtasks</h3>
 <p>Shows how to submit tasks from tasks.</p>
