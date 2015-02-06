@@ -41,7 +41,7 @@ and SuperGlue uses this information to deduce dependencies.</p>
 
 <h3>SHOW ME THE CODE!</h3>
 
-<pre><code>#include "superglue.hpp"
+<pre><code>#include "sg/superglue.hpp"
 #include &lt;iostream&gt;
 
 // Settings for SuperGlue. Here we use the defaults.
@@ -55,20 +55,20 @@ struct MyTask : public Task&lt;Options&gt; {
 };
 
 int main() {
-    // The ThreadManager object starts the run-time system and starts
+    // The SuperGlue object starts the run-time system and starts
     // as many worker threads as there are cores.
-    ThreadManager&lt;Options&gt; tm;
+    SuperGlue&lt;Options&gt; sg;
 
     // Create a task and submit it to SuperGlue
-    tm.submit(new MyTask());
+    sg.submit(new MyTask());
 
     return 0;
 }
 </code></pre>
 
 <p>Check the "examples/" directory for more examples. The above example is found
-in "examples/helloworld/". For an example with task dependencies, look at
-"examples/dependencies/".</p>
+in "examples/src/helloworld.cpp". For an example with task dependencies, look at
+"examples/src/dependencies.cpp".</p>
 
 <h3>COMPILING AND INSTALLING</h3>
 
