@@ -16,7 +16,7 @@ private:
 
     ThreadingManager &tm;
     char padding1[Options::CACHE_LINE_SIZE];
-    size_t barrier_counter; // written by everybody, read by main thread
+    unsigned int barrier_counter; // written by everybody, read by main thread
     char padding2[Options::CACHE_LINE_SIZE];
     int state;             // written by anyone, 3 times per try, read by everybody
     int abort;             // read/written on every task submit. written by anyone, 1 time per try, read by main thread.
@@ -46,7 +46,8 @@ public:
 
         if (local_state == 1) {
             // enter barrier
-            if (Atomic::decrease_nv(&barrier_counter) != 0) {
+            const unsigned int local_barrier_counter(Atomic::decrease_nv(&barrier_counter));
+            if (local_barrier_counter != 0) {
                 // wait for next state
                 for (;;) {
                     const int local_abort(abort);
@@ -80,7 +81,8 @@ public:
                 state = 2;
 
                 te.my_barrier_state = 2;
-                if (Atomic::decrease_nv(&barrier_counter) == 0) {
+                const unsigned int local_barrier_counter(Atomic::decrease_nv(&barrier_counter));
+                if (local_barrier_counter == 0) {
                     // last into phase 2
 
                     barrier_counter = tm.get_num_cpus()-2;
@@ -101,7 +103,7 @@ public:
             }
             else {
                 // last in for state 1 -- start phase 2
-                const size_t num_workers = tm.get_num_cpus()-1;
+                const unsigned int num_workers = tm.get_num_cpus()-1;
                 if (num_workers == 1) {
                     // if there is a single worker we can't wait for anybody else to finish the barrier.
                     if (!te.get_task_queue().empty_safe()) {
@@ -159,7 +161,8 @@ public:
 
         // first time we see state == 2, and barrier is already aborted
 
-        if (Atomic::decrease_nv(&barrier_counter) == 0) {
+        const unsigned int local_barrier_counter(Atomic::decrease_nv(&barrier_counter));
+        if (local_barrier_counter == 0) {
             // last into phase 2 -- finish barrier
             te.my_barrier_state = 0;
             state = 0;
@@ -177,7 +180,7 @@ public:
             while (te.execute_tasks(woken));
         }
 
-        const size_t num_workers(tm.get_num_cpus()-1);
+        const unsigned int num_workers(static_cast<unsigned int>(tm.get_num_cpus())-1);
 
         if (num_workers == 0)
             return;

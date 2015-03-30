@@ -16,7 +16,11 @@ struct TaskQueueTest {
         }
     };
 
-    static bool testTaskQueueImpl(std::string &name) { name = "testTaskQueue";
+    static const std::string &name(TaskBase<Options> *task) {
+        return ((MyTask *) task)->name;
+    }
+
+    static bool testTaskQueueImpl(std::string &testname) { testname = "testTaskQueue";
         typename Options::ReadyListType::unsafe_t q;
 
         if (!q.empty()) return false;
@@ -26,56 +30,50 @@ struct TaskQueueTest {
         q.push_back(new MyTask("C"));
         q.push_back(new MyTask("D"));
 
-        union {
-            TaskBase<Options> *taskBase;
-            MyTask *task;
-        };
+        TaskBase<Options> *task;
 
-        if (!q.pop_front(taskBase) || task->name != "B") return false;
-        if (!q.pop_front(taskBase) || task->name != "A") return false;
-        if (!q.pop_front(taskBase) || task->name != "C") return false;
-        if (!q.pop_front(taskBase) || task->name != "D") return false;
-        if (!q.empty() || q.pop_front(taskBase)) return false;
+        if (!q.pop_front(task) || name(task) != "B") return false;
+        if (!q.pop_front(task) || name(task) != "A") return false;
+        if (!q.pop_front(task) || name(task) != "C") return false;
+        if (!q.pop_front(task) || name(task) != "D") return false;
+        if (!q.empty() || q.pop_front(task)) return false;
 
         q.push_front(new MyTask("A"));
         q.push_front(new MyTask("B"));
         q.push_front(new MyTask("C"));
         q.push_front(new MyTask("D"));
 
-        if (!q.pop_back(taskBase) || task->name != "A") return false;
-        if (!q.pop_back(taskBase) || task->name != "B") return false;
-        if (!q.pop_back(taskBase) || task->name != "C") return false;
-        if (!q.pop_back(taskBase) || task->name != "D") return false;
-        if (!q.empty() || q.pop_back(taskBase)) return false;
+        if (!q.pop_back(task) || name(task) != "A") return false;
+        if (!q.pop_back(task) || name(task) != "B") return false;
+        if (!q.pop_back(task) || name(task) != "C") return false;
+        if (!q.pop_back(task) || name(task) != "D") return false;
+        if (!q.empty() || q.pop_back(task)) return false;
 
         if (!q.empty()) return false;
         q.push_back(new MyTask("A"));
         if (q.empty()) return false;
         q.push_front(new MyTask("B"));
 
-        if (!q.pop_front(taskBase)) return false;
-        if (task->name != "B") return false;
-        if (!q.pop_front(taskBase)) return false;
-        if (task->name != "A") return false;
-        if (q.pop_front(taskBase)) return false;
+        if (!q.pop_front(task)) return false;
+        if (name(task) != "B") return false;
+        if (!q.pop_front(task)) return false;
+        if (name(task) != "A") return false;
+        if (q.pop_front(task)) return false;
 
         q.push_front(new MyTask("A"));
         q.push_front(new MyTask("B"));
 
-        if (!q.pop_back(taskBase)) return false;
-        if (task->name != "A") return false;
-        if (!q.pop_back(taskBase)) return false;
-        if (task->name != "B") return false;
-        if (q.pop_back(taskBase)) return false;
+        if (!q.pop_back(task)) return false;
+        if (name(task) != "A") return false;
+        if (!q.pop_back(task)) return false;
+        if (name(task) != "B") return false;
+        if (q.pop_back(task)) return false;
 
         return true;
     }
 
-    static bool testEraseIfImpl(std::string &name) { name = "testEraseIf";
-        union {
-          TaskBase<Options> *taskBase;
-          MyTask *task;
-        };
+    static bool testEraseIfImpl(std::string &testname) { testname = "testEraseIf";
+        TaskBase<Options> *task;
         {
             typename Options::TaskQueueUnsafeType q;
             q.push_back(new MyTask("A"));
@@ -83,11 +81,11 @@ struct TaskQueueTest {
             q.push_back(new MyTask("C"));
             q.push_back(new MyTask("D"));
             q.erase_if(IsBPred());
-            if (!q.pop_front(taskBase) || task->name != "A") return false;
-            if (!q.pop_front(taskBase) || task->name != "E") return false;
-            if (!q.pop_front(taskBase) || task->name != "C") return false;
-            if (!q.pop_front(taskBase) || task->name != "D") return false;
-            if (!q.empty() || q.pop_front(taskBase)) return false;
+            if (!q.pop_front(task) || name(task) != "A") return false;
+            if (!q.pop_front(task) || name(task) != "E") return false;
+            if (!q.pop_front(task) || name(task) != "C") return false;
+            if (!q.pop_front(task) || name(task) != "D") return false;
+            if (!q.empty() || q.pop_front(task)) return false;
         }
         {
             typename Options::TaskQueueUnsafeType q;
@@ -95,9 +93,9 @@ struct TaskQueueTest {
             q.push_back(new MyTask("B"));
             q.push_back(new MyTask("C"));
             q.erase_if(IsBPred());
-            if (!q.pop_front(taskBase) || task->name != "A") return false;
-            if (!q.pop_front(taskBase) || task->name != "C") return false;
-            if (!q.empty() || q.pop_front(taskBase)) return false;
+            if (!q.pop_front(task) || name(task) != "A") return false;
+            if (!q.pop_front(task) || name(task) != "C") return false;
+            if (!q.empty() || q.pop_front(task)) return false;
         }
         {
             typename Options::TaskQueueUnsafeType q;
@@ -107,7 +105,7 @@ struct TaskQueueTest {
             q.push_back(new MyTask("B"));
             q.push_back(new MyTask("B"));
             q.erase_if(IsBPred());
-            if (!q.empty() || q.pop_front(taskBase)) return false;
+            if (!q.empty() || q.pop_front(task)) return false;
         }
         {
             typename Options::TaskQueueUnsafeType q;
@@ -117,9 +115,9 @@ struct TaskQueueTest {
             q.push_back(new MyTask("C"));
             q.push_back(new MyTask("B"));
             q.erase_if(IsBPred());
-            if (!q.pop_front(taskBase) || task->name != "A") return false;
-            if (!q.pop_front(taskBase) || task->name != "C") return false;
-            if (!q.empty() || q.pop_front(taskBase)) return false;
+            if (!q.pop_front(task) || name(task) != "A") return false;
+            if (!q.pop_front(task) || name(task) != "C") return false;
+            if (!q.empty() || q.pop_front(task)) return false;
         }
         {
             typename Options::TaskQueueUnsafeType q;
@@ -128,9 +126,9 @@ struct TaskQueueTest {
             q.push_back(new MyTask("B"));
             q.push_back(new MyTask("C"));
             q.erase_if(IsBPred());
-            if (!q.pop_front(taskBase) || task->name != "A") return false;
-            if (!q.pop_front(taskBase) || task->name != "C") return false;
-            if (!q.empty() || q.pop_front(taskBase)) return false;
+            if (!q.pop_front(task) || name(task) != "A") return false;
+            if (!q.pop_front(task) || name(task) != "C") return false;
+            if (!q.empty() || q.pop_front(task)) return false;
         }
 
         return true;

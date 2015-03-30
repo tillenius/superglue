@@ -151,8 +151,8 @@ public:
         TaskBase<Options> *current_parent = task->parent;
         while (current_parent != NULL) {
             // this task is a subtask of some other task
-
-            if (Atomic::decrease_nv(&current_parent->subtask_count) > 0)
+            const size_t count(Atomic::decrease_nv(&current_parent->subtask_count));
+            if (count > 0)
                 break;
 
             // release parent and continue to parent's parent

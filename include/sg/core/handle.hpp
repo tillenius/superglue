@@ -179,7 +179,8 @@ public:
     Handle_Lockable() : available(1) {}
 
     bool get_lock(lockcount_t required) {
-        if (Atomic::add_nv(&available, -required) < std::numeric_limits<lockcount_t>::max()/2)
+        const lockcount_t ver(Atomic::add_nv(&available, -required));
+        if (ver < std::numeric_limits<lockcount_t>::max()/2)
             return true;
 
         // someone else got in between: revert

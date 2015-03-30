@@ -14,15 +14,18 @@ class TestTaskQueuePrio : public TestCase {
         typedef TaskQueuePrio<OpDefault> WaitListType;
     };
 
-    struct LowPrioTask : public Task<OpDefault> {
+    struct NamedTask : public Task<OpDefault> {
         std::string name;
-        LowPrioTask(std::string name_) : name(name_) {}
+        NamedTask(const std::string &name_) : name(name_) {}
+    };
+
+    struct LowPrioTask : public NamedTask {
+        LowPrioTask(const std::string &name_) : NamedTask(name_) {}
         void run() {}
     };
 
-    struct HighPrioTask : public Task<OpDefault> {
-        std::string name;
-        HighPrioTask(std::string name_) : name(name_) {
+    struct HighPrioTask : public NamedTask {
+        HighPrioTask(const std::string &name_) : NamedTask(name_) {
             is_prioritized = true;
         }
         void run() {}
@@ -36,53 +39,52 @@ class TestTaskQueuePrio : public TestCase {
         return TaskQueueTest<OpDefault>::testTaskQueueImpl(name);
     }
 
-    static bool testPrio(std::string &name) { name = "testTaskQueuePrio";
+    static const std::string &name(TaskBase<OpDefault> *task) {
+        return static_cast<NamedTask *>(task)->name;
+    }
+
+    static bool testPrio(std::string &testname) { testname = "testTaskQueuePrio";
         typedef OpDefault::ReadyListType::unsafe_t TaskQueueUnsafe;
 
         TaskQueueUnsafe q;
-
-        union {
-            TaskBase<OpDefault> *taskBase;
-            LowPrioTask *task;
-            HighPrioTask *task2;
-        };
+	TaskBase<OpDefault> *task;
 
         if (!q.empty()) return false;
         q.push_back(new LowPrioTask("B"));
         q.push_back(new HighPrioTask("A"));
         q.push_back(new LowPrioTask("B"));
 
-        if (!q.pop_front(taskBase) || task->name != "A") return false;
-        if (!q.pop_front(taskBase) || task->name != "B") return false;
-        if (!q.pop_front(taskBase) || task->name != "B") return false;
-        if (!q.empty() || q.pop_front(taskBase)) return false;
+        if (!q.pop_front(task) || name(task) != "A") return false;
+        if (!q.pop_front(task) || name(task) != "B") return false;
+        if (!q.pop_front(task) || name(task) != "B") return false;
+        if (!q.empty() || q.pop_front(task)) return false;
 
         q.push_back(new LowPrioTask("B"));
         q.push_back(new HighPrioTask("A"));
         q.push_back(new LowPrioTask("B"));
 
-        if (!q.pop_back(taskBase) || task->name != "A") return false;
-        if (!q.pop_back(taskBase) || task->name != "B") return false;
-        if (!q.pop_back(taskBase) || task->name != "B") return false;
-        if (!q.empty() || q.pop_front(taskBase)) return false;
+        if (!q.pop_back(task) || name(task) != "A") return false;
+        if (!q.pop_back(task) || name(task) != "B") return false;
+        if (!q.pop_back(task) || name(task) != "B") return false;
+        if (!q.empty() || q.pop_front(task)) return false;
 
         q.push_front(new LowPrioTask("B"));
         q.push_front(new HighPrioTask("A"));
         q.push_front(new LowPrioTask("B"));
 
-        if (!q.pop_front(taskBase) || task->name != "A") return false;
-        if (!q.pop_front(taskBase) || task->name != "B") return false;
-        if (!q.pop_front(taskBase) || task->name != "B") return false;
-        if (!q.empty() || q.pop_front(taskBase)) return false;
+        if (!q.pop_front(task) || name(task) != "A") return false;
+        if (!q.pop_front(task) || name(task) != "B") return false;
+        if (!q.pop_front(task) || name(task) != "B") return false;
+        if (!q.empty() || q.pop_front(task)) return false;
 
         q.push_front(new LowPrioTask("B"));
         q.push_front(new HighPrioTask("A"));
         q.push_front(new LowPrioTask("B"));
 
-        if (!q.pop_back(taskBase) || task->name != "A") return false;
-        if (!q.pop_back(taskBase) || task->name != "B") return false;
-        if (!q.pop_back(taskBase) || task->name != "B") return false;
-        if (!q.empty() || q.pop_front(taskBase)) return false;
+        if (!q.pop_back(task) || name(task) != "A") return false;
+        if (!q.pop_back(task) || name(task) != "B") return false;
+        if (!q.pop_back(task) || name(task) != "B") return false;
+        if (!q.empty() || q.pop_front(task)) return false;
 
         return true;
     }
