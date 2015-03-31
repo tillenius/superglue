@@ -4,6 +4,9 @@
 #include <OPENGL/gl.h>
 #include <GLUT/glut.h>
 #else
+#ifdef _MSC_VER
+#include "windows.h"
+#endif
 #include <GL/gl.h>
 #include <GL/glut.h>
 #endif
@@ -56,7 +59,7 @@ vector< vector< double > > procthr2coord;
 
 vector< vector< vector< Entry > > > tasksperproc;
 
-GLfloat m_pos[3];
+GLdouble m_pos[3];
 int window_width = 0;
 int window_height = 0;
 int m_firstx = 0;
@@ -182,8 +185,8 @@ void doPaint() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
 
-    glScalef(scalex, scaley, 0.0);
-    glTranslatef(m_pos[0], m_pos[1], m_pos[2]);
+    glScaled(scalex, scaley, 0.0);
+    glTranslated(m_pos[0], m_pos[1], m_pos[2]);
 
     if (selection) {
         glColor3ub(128, 255, 80);
