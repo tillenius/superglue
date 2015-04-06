@@ -84,6 +84,9 @@ public:
     {
         assert(req == -1);
 
+        // initialize static singleton before starting threads
+        Options::LogDAG::get_dag_data();
+
         // In the OpenMP backend, the ThreadManager is instantiated
         // in a serial section, so in contrast to the threaded backend
         // we do not know the number of threads here.

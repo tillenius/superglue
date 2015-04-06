@@ -46,8 +46,8 @@ template<typename Options, typename T = typename Options::Lockable> class Access
 
 template<typename Options>
 class Access_Lockable<Options, typename Options::Disable> {
-    typedef typename Options::version_t version_t;
-    typedef typename Options::lockcount_t lockcount_t;
+    typedef typename Options::version_type version_type;
+    typedef typename Options::lockcount_type lockcount_type;
     typedef typename Options::WaitListType TaskQueue;
     typedef typename TaskQueue::unsafe_t TaskQueueUnsafe;
 
@@ -56,8 +56,8 @@ public:
     static bool needs_lock() { return false; }
     static void release_lock(TaskQueueUnsafe &) {}
     static bool get_lock_or_notify(TaskBase<Options> *) { return true; }
-    static void set_required_quantity(lockcount_t required_) {}
-    version_t finished(TaskQueueUnsafe &woken) {
+    static void set_required_quantity(lockcount_type required_) {}
+    version_type finished(TaskQueueUnsafe &woken) {
         const Access<Options> *this_(static_cast<const Access<Options> *>(this));
         return this_->handle->increase_current_version(woken);
     }
@@ -65,12 +65,12 @@ public:
 
 template<typename Options>
 class Access_Lockable<Options, typename Options::Enable> {
-    typedef typename Options::lockcount_t lockcount_t;
-    typedef typename Options::version_t version_t;
+    typedef typename Options::lockcount_type lockcount_type;
+    typedef typename Options::version_type version_type;
     typedef typename Options::WaitListType TaskQueue;
     typedef typename TaskQueue::unsafe_t TaskQueueUnsafe;
 private:
-    lockcount_t required;
+    lockcount_type required;
 public:
     Access_Lockable() : required(0) {}
 
@@ -103,11 +103,11 @@ public:
     }
 
 public:
-    void set_required_quantity(lockcount_t required_) { required = required_; }
+    void set_required_quantity(lockcount_type required_) { required = required_; }
     bool needs_lock() const { return required != 0; }
-    version_t finished(TaskQueueUnsafe &woken) {
+    version_type finished(TaskQueueUnsafe &woken) {
         const Access<Options> *this_(static_cast<const Access<Options> *>(this));
-        version_t ver;
+        version_type ver;
         if (this_->use_contrib())
             ver = this_->handle->increase_current_version_no_unlock(woken);
         else
@@ -129,13 +129,13 @@ class Access
 {
 public:
     typedef typename Options::AccessInfoType AccessInfo;
-    typedef typename Options::version_t version_t;
+    typedef typename Options::version_type version_type;
 
     Handle<Options> *handle;
-    version_t required_version;
+    version_type required_version;
 
     Access() {}
-    Access(Handle<Options> *handle_, typename Options::version_t version_)
+    Access(Handle<Options> *handle_, typename Options::version_type version_)
     : handle(handle_), required_version(version_) {}
 
     Handle<Options> *get_handle() const {

@@ -22,8 +22,8 @@ public:
 #include "unit/test_subtasks.hpp"
 
 int main(int argc, char *argv[]) {
-    size_t numTests = 0;
-    size_t numSuccess = 0;
+    size_t num_tests = 0;
+    size_t num_success = 0;
 
     TestCase *modules[] = {
         new TestHandle(),
@@ -41,17 +41,17 @@ int main(int argc, char *argv[]) {
 
     for (size_t i = 0; i < sizeof(modules)/sizeof(TestCase*); ++i) {
 
-        size_t numCases = 0;
-        TestCase::testfunction *tests = modules[i]->get(numCases);
-        numTests += numCases;
+        size_t num_cases = 0;
+        TestCase::testfunction *tests = modules[i]->get(num_cases);
+        num_tests += num_cases;
 
         std::vector<std::string> failed;
         std::string testname;
 
         std::cout << modules[i]->get_name() << std::flush;
-        for (size_t j = 0; j < numCases; ++j) {
+        for (size_t j = 0; j < num_cases; ++j) {
             if (tests[j](testname))
-                ++numSuccess;
+                ++num_success;
             else
                 failed.push_back(testname);
         }
@@ -67,6 +67,6 @@ int main(int argc, char *argv[]) {
         delete modules[i];
     }
 
-    std::cout << numSuccess << "/" << numTests << std::endl;
+    std::cout << num_success << "/" << num_tests << std::endl;
     return 0;
 }

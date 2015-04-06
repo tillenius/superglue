@@ -24,7 +24,7 @@ struct MyTask : public Task<Options> {
             mem2[i] = mem1[i] = i;
 
         // Sum the memory
-        *a = 0.0;
+        *a = 0;
         for (int i = 0; i < 1024; ++i)
             *a += mem2[i] + mem1[i];
 

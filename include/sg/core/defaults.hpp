@@ -40,7 +40,7 @@ public:
     }
 
     bool steal(typename Options::ThreadingManagerType &tman, size_t id, TaskBase<Options> *&dest) {
-        TaskQueue **taskQueues(tman.get_task_queues());
+        TaskQueue **taskQueues = tman.get_task_queues();
         const size_t num_queues(tman.get_num_cpus());
         seed = seed * 1664525 + 1013904223;
         const size_t random(seed % num_queues);
@@ -58,31 +58,6 @@ public:
                 return true;
         }
         return false;
-    }
-};
-
-// ============================================================================
-// Default Dependency checking: Check at submit
-// ============================================================================
-template<typename Options>
-struct EagerDependencyChecking {
-    typedef typename Options::WaitListType WaitListType;
-    typedef typename WaitListType::unsafe_t TaskQueueUnsafe;
-
-    struct DependenciesNotSolvedPredicate {
-        bool operator()(TaskBase<Options> *elem) {
-            return !elem->are_dependencies_solved_or_notify();
-        }
-    };
-
-    static bool check_before_execution(TaskBase<Options> *) {
-        return true;
-    }
-    static bool check_at_submit(TaskBase<Options> *task) {
-        return task->are_dependencies_solved_or_notify();
-    }
-    static void check_at_wakeup(TaskQueueUnsafe &list) {
-        list.erase_if(DependenciesNotSolvedPredicate());
     }
 };
 
@@ -107,22 +82,24 @@ struct NoInstrumentation {
 // ============================================================================
 template<typename Options>
 struct NoDAG {
-    typedef typename Options::version_t version_t;
+    typedef typename Options::version_type version_type;
     typedef typename Options::AccessInfoType AccessInfo;
     typedef typename AccessInfo::Type AccessType;
     
     static void add_dependency(TaskBase<Options> *task, 
                                Handle<Options> *handle,
-                               version_t version,
+                               version_type version,
                                AccessType type) {}
     static void task_finish(TaskBase<Options> *task,
                             Handle<Options> *handle,
-                            version_t version) {}
+                            version_type version) {}
     static void init() {}
     static void finalize() {}
 
     static void run_task_before(TaskBase<Options> *) {}
     static void run_task_after(TaskBase<Options> *) {}
+
+    static void get_dag_data() {}
 };
 
 // ============================================================================
@@ -169,10 +146,10 @@ struct DefaultOptions {
     };
     typedef DefaultStealOrder<Options> StealOrder;
     typedef ReadWriteAdd AccessInfoType;
-    typedef unsigned int version_t;
-    typedef unsigned int handleid_t;
-    typedef unsigned int taskid_t;
-    typedef unsigned int lockcount_t;
+    typedef unsigned int version_type;
+    typedef unsigned int handleid_type;
+    typedef unsigned int taskid_type;
+    typedef long lockcount_type;
 
     // Types that can be overloaded
     typedef HandleBase<Options> HandleType;
@@ -200,9 +177,6 @@ struct DefaultOptions {
 
     // Size of ThreadWorkspace (only used if ThreadWorkspace is enabled)
     enum { ThreadWorkspace_size = 102400 };
-
-    // Dependency Checking Options
-    typedef EagerDependencyChecking<Options> DependencyChecking;
 
     // Instrumentation
     typedef NoInstrumentation<Options> Instrumentation;

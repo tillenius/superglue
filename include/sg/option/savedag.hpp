@@ -121,7 +121,7 @@ std::string get_style(TaskBase<Options> *task) {
 
 template<typename Options>
 class SaveDAG {
-    typedef typename Options::version_t version_t;
+    typedef typename Options::version_type version_type;
 private:
     static size_t add_node(detail::LogDagData &data, std::string name, std::string style, size_t type) {
         data.nodes.push_back(detail::Node(name, style, type));
@@ -164,7 +164,7 @@ public:
         data.task_finish.push_back(detail::TaskFinish(task->get_global_id(), handle->get_global_id(), newVersion));
     }
 
-    static void add_dependency(TaskBase<Options> *task, Handle<Options> *handle, version_t required_version, int type) {
+    static void add_dependency(TaskBase<Options> *task, Handle<Options> *handle, version_type required_version, int type) {
         detail::LogDagData &data(get_dag_data());
         SpinLockScoped lock(data.spinlock);
         // have to register nodes here, as we cannot get name otherwise.
@@ -177,6 +177,7 @@ public:
 
     static void new_rank() {
         detail::LogDagData &data(get_dag_data());
+        SpinLockScoped lock(data.spinlock);
         if (data.nodes.empty())
             return;
         if (!data.ranks.empty()) {

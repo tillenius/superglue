@@ -27,15 +27,15 @@ class Task_GlobalId<Options, typename Options::Disable> {};
 
 template<typename Options>
 class Task_GlobalId<Options, typename Options::Enable> {
-    typedef typename Options::taskid_t taskid_t;
+    typedef typename Options::taskid_type taskid_type;
 private:
-    taskid_t id;
+    taskid_type id;
 public:
     Task_GlobalId() {
-        static taskid_t global_task_id = 0;
+        static taskid_type global_task_id = 0;
         id = Atomic::increase_nv(&global_task_id);
     }
-    taskid_t get_global_id() const { return id; }
+    taskid_type get_global_id() const { return id; }
 };
 
 // ============================================================================
@@ -158,15 +158,15 @@ class TaskAccessMixin : public TaskBaseType {
     Access<Options> access[N];
     typedef typename Options::AccessInfoType AccessInfo;
     typedef typename AccessInfo::Type AccessType;
-    typedef typename Options::version_t version_t;
-    typedef typename Options::lockcount_t lockcount_t;
+    typedef typename Options::version_type version_type;
+    typedef typename Options::lockcount_type lockcount_type;
 public:
     TaskAccessMixin() {
         // If this assignment is done through a constructor, we can save the initial assignment,
         // but then any user-overloaded TaskBaseDefault() class must forward both constructors.
         TaskBaseType::access_ptr = &access[0];
     }
-    void fulfill(AccessType type, Handle<Options> &handle, version_t version) {
+    void fulfill(AccessType type, Handle<Options> &handle, version_type version) {
         Access<Options> &a(access[TaskBaseType::num_access]);
         a.handle = &handle;
         a.required_version = version;
@@ -178,7 +178,7 @@ public:
     void register_access(AccessType type, Handle<Options> &handle) {
         fulfill(type, handle, handle.schedule(type));
     }
-    void require(Resource<Options> &resource, lockcount_t quantity = 1) {
+    void require(Resource<Options> &resource, lockcount_type quantity = 1) {
         Access<Options> &a(access[TaskBaseType::num_access]);
         a.handle = &resource;
         a.required_version = 0;
@@ -198,12 +198,12 @@ class TaskAccessMixin<Options, TaskBaseType, -1> : public TaskBaseType {
     typedef typename Options::AccessInfoType AccessInfo;
     typedef typename AccessInfo::Type AccessType;
     typedef typename Types<Options>::template vector_t< Access<Options> >::type access_vector_t;
-    typedef typename Options::version_t version_t;
-    typedef typename Options::lockcount_t lockcount_t;
+    typedef typename Options::version_type version_type;
+    typedef typename Options::lockcount_type lockcount_type;
 protected:
     access_vector_t access;
 public:
-    void fulfill(AccessType type, Handle<Options> &handle, version_t version) {
+    void fulfill(AccessType type, Handle<Options> &handle, version_type version) {
         access.push_back(Access<Options>(&handle, version));
         Access<Options> &a(access[access.size()-1]);
         if (AccessUtil<Options>::needs_lock(type))
@@ -216,7 +216,7 @@ public:
     void register_access(AccessType type, Handle<Options> &handle) {
         fulfill(type, handle, handle.schedule(type));
     }
-    void require(Resource<Options> &resource, lockcount_t quantity = 1) {
+    void require(Resource<Options> &resource, lockcount_type quantity = 1) {
         access.push_back(Access<Options>(&resource, 0));
         Access<Options> &a(access[access.size()-1]);
         a.set_required_quantity(quantity);

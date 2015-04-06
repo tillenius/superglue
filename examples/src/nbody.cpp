@@ -8,9 +8,9 @@
 
 using namespace std;
 
-struct vector_t {
+struct vector_type {
     double x[3];
-    void operator +=(const vector_t &y) {
+    void operator +=(const vector_type &y) {
         const double *z(y.x);
         x[0] += z[0];
         x[1] += z[1];
@@ -18,7 +18,7 @@ struct vector_t {
     }
 };
 
-struct particle_t {
+struct particle_type {
     double x[3];
     double dx[3];
 };
@@ -34,12 +34,12 @@ struct particle_t {
 struct Options : public DefaultOptions<Options> {
     typedef Trace<Options> Instrumentation;
     typedef Enable Contributions;
-    typedef Contribution<vector_t> ContributionType;
+    typedef Contribution<vector_type> ContributionType;
     typedef Enable TaskName;
 };
 
-typedef Handle<Options> handle_t;
-typedef Access<Options> access_t;
+typedef Handle<Options> handle_type;
+typedef Access<Options> access_type;
 
 const double dt = 0.01;
 const double EPSILON = 1.0;
@@ -47,13 +47,13 @@ const double SIGMA = 1.0;
 const double LJ_CONST_A = -24.0*SIGMA*SIGMA*SIGMA*SIGMA*SIGMA*SIGMA*EPSILON;
 const double LJ_CONST_B = -48.0*SIGMA*SIGMA*SIGMA*SIGMA*SIGMA*SIGMA*SIGMA*SIGMA*SIGMA*SIGMA*SIGMA*SIGMA*EPSILON;
 
-particle_t *globalptr;
+particle_type *globalptr;
 
 //======================================================
 // "kernels"
 //======================================================
 
-inline static void eval_force_tk(particle_t *p0, particle_t *p1, vector_t *force) {
+inline static void eval_force_tk(particle_type *p0, particle_type *p1, vector_type *force) {
     const double dx = p0->x[0] - p1->x[0];
     const double dy = p0->x[1] - p1->x[1];
     const double dz = p0->x[2] - p1->x[2];
@@ -67,7 +67,7 @@ inline static void eval_force_tk(particle_t *p0, particle_t *p1, vector_t *force
     force->x[2] = c * dz;
 }
 
-inline static void init_particle_tk(particle_t *p, int i, int num_particles) {
+inline static void init_particle_tk(particle_type *p, int i, int num_particles) {
     int s = (int) pow(num_particles, 1.0/3.0);
     int px = i/(s*s);
     int py = (i-px*s*s)/s;
@@ -84,7 +84,7 @@ inline static void init_particle_tk(particle_t *p, int i, int num_particles) {
     p->x[2] = pz * distance;
 }
 
-inline static void step_tk(particle_t *p, vector_t *a) {
+inline static void step_tk(particle_type *p, vector_type *a) {
     const double c1 = 0.5 * dt;
     const double c2 = c1 * dt;
 
@@ -108,12 +108,12 @@ inline static void step_tk(particle_t *p, vector_t *a) {
 // "task payload"
 //======================================================
 
-static void task_eval_within(particle_t *particles, vector_t *forces, size_t bsz) {
+static void task_eval_within(particle_type *particles, vector_type *forces, size_t bsz) {
     for (size_t i = 0; i < bsz; ++i) {
-        vector_t tmp;
+        vector_type tmp;
         tmp.x[0] = tmp.x[1] = tmp.x[2] = 0.0;
         for (size_t j = i + 1; j < bsz; ++j) {
-            vector_t f;
+            vector_type f;
             eval_force_tk(&particles[i], &particles[j], &f);
             tmp.x[0] += f.x[0];
             tmp.x[1] += f.x[1];
@@ -130,12 +130,12 @@ static void task_eval_within(particle_t *particles, vector_t *forces, size_t bsz
 
 template<typename T>
 struct ScopedContribProxy {
-    access_t &a;
+    access_type &a;
     union {
         Contribution<T> *contrib;
         T *src;
     };
-    ScopedContribProxy(access_t &a_, T *dest, size_t size) : a(a_) {
+    ScopedContribProxy(access_type &a_, T *dest, size_t size) : a(a_) {
         if (a.use_contrib()) {
             contrib = a.get_handle()->get_contribution();
             if (contrib != NULL)
@@ -159,17 +159,18 @@ struct ScopedContribProxy {
     }
 };
 
-static void task_eval_between(particle_t *p0, particle_t *p1, vector_t *f0_, vector_t *f1_,
-                              access_t a0, access_t a1, size_t bsz) {
-    ScopedContribProxy<vector_t> force0(a0, f0_, bsz);
-    ScopedContribProxy<vector_t> force1(a1, f1_, bsz);
-    vector_t *f0 = force0.getAddress();
-    vector_t *f1 = force1.getAddress();
+static void task_eval_between(particle_type *p0, particle_type *p1, 
+                              vector_type *f0_, vector_type *f1_,
+                              access_type a0, access_type a1, size_t bsz) {
+    ScopedContribProxy<vector_type> force0(a0, f0_, bsz);
+    ScopedContribProxy<vector_type> force1(a1, f1_, bsz);
+    vector_type *f0 = force0.getAddress();
+    vector_type *f1 = force1.getAddress();
     for (size_t i = 0; i < bsz; ++i) {
-        vector_t tmp;
+        vector_type tmp;
         tmp.x[0] = tmp.x[1] = tmp.x[2] = 0.0;
         for (size_t j = 0; j < bsz; ++j) {
-            vector_t f;
+            vector_type f;
             eval_force_tk(&p0[i], &p1[j], &f);
             tmp.x[0] += f.x[0];
             tmp.x[1] += f.x[1];
@@ -184,7 +185,7 @@ static void task_eval_between(particle_t *p0, particle_t *p1, vector_t *f0_, vec
     }
 }
 
-static void task_step(particle_t *particles, vector_t *forces, size_t bsz) {
+static void task_step(particle_type *particles, vector_type *forces, size_t bsz) {
     for (size_t i = 0; i < bsz; ++i)
         step_tk(&particles[i], &forces[i]);
 }
@@ -195,14 +196,13 @@ static void task_step(particle_t *particles, vector_t *forces, size_t bsz) {
 
 class TimeStepTask : public Task<Options, 2> {
 private:
-    particle_t *p0_;
-    vector_t *f0_;
+    particle_type *p0_;
+    vector_type *f0_;
     size_t slice_size_;
 
 public:
-    TimeStepTask(particle_t *p0, handle_t &hp0,
-                 vector_t *f0, handle_t &hf0,
-                 size_t slice_size) {
+    TimeStepTask(particle_type *p0, handle_type &hp0,
+                 vector_type *f0, handle_type &hf0, size_t slice_size) {
         register_access(ReadWriteAdd::read, hf0);
         register_access(ReadWriteAdd::add, hp0);
         p0_ = p0; f0_ = f0;
@@ -220,13 +220,13 @@ public:
 
 class EvalWithinTask : public Task<Options, 2> {
 private:
-    particle_t *p0_;
-    vector_t *f0_;
+    particle_type *p0_;
+    vector_type *f0_;
     size_t slice_size_;
 
 public:
-    EvalWithinTask(particle_t *p0, handle_t &hp0,
-                   vector_t *f0, handle_t &hf0,
+    EvalWithinTask(particle_type *p0, handle_type &hp0,
+                   vector_type *f0, handle_type &hf0,
                    size_t slice_size) {
         register_access(ReadWriteAdd::read, hp0);
         register_access(ReadWriteAdd::add, hf0);
@@ -246,15 +246,15 @@ public:
 
 class EvalBetweenTask : public Task<Options, 4> {
 private:
-    particle_t *p0_, *p1_;
-    vector_t *f0_, *f1_;
+    particle_type *p0_, *p1_;
+    vector_type *f0_, *f1_;
     size_t slice_size_;
 
 public:
-    EvalBetweenTask(particle_t *p0, handle_t &hp0,
-                    particle_t *p1, handle_t &hp1,
-                    vector_t *f0, handle_t &hf0,
-                    vector_t *f1, handle_t &hf1,
+    EvalBetweenTask(particle_type *p0, handle_type &hp0,
+                    particle_type *p1, handle_type &hp1,
+                    vector_type *f0, handle_type &hf0,
+                    vector_type *f1, handle_type &hf1,
                     size_t slice_size) {
         register_access(ReadWriteAdd::read, hp0);
         register_access(ReadWriteAdd::read, hp1);
@@ -283,7 +283,7 @@ public:
 //======================================================
 // initialize particles and forces
 //======================================================
-void init(particle_t *particles, vector_t *forces, const size_t num_particles) {
+void init(particle_type *particles, vector_type *forces, const size_t num_particles) {
     size_t i;
 
     for (i = 0; i < num_particles; ++i)
@@ -297,8 +297,8 @@ void init(particle_t *particles, vector_t *forces, const size_t num_particles) {
 // evaluate all forces
 //======================================================
 void eval_force(SuperGlue<Options> &sg,
-        particle_t *particles, handle_t *part,
-        vector_t *forces, handle_t *forc,
+        particle_type *particles, handle_type *part,
+        vector_type *forces, handle_type *forc,
         const size_t block_size, const size_t num_blocks) {
 
     for (size_t i = 0; i < num_blocks; ++i) {
@@ -320,8 +320,8 @@ void eval_force(SuperGlue<Options> &sg,
 // take a time step
 //======================================================
 void step(SuperGlue<Options> &sg,
-        particle_t *particles, handle_t *part,
-        vector_t *forces, handle_t *forc,
+        particle_type *particles, handle_type *part,
+        vector_type *forces, handle_type *forc,
         const size_t block_size, const size_t num_blocks) {
     size_t i;
 
@@ -336,8 +336,8 @@ void step(SuperGlue<Options> &sg,
 // run simulation for num_steps time steps
 //======================================================
 void run(SuperGlue<Options> &sg,
-        particle_t *particles, handle_t *part,
-        vector_t *forces, handle_t *forc,
+        particle_type *particles, handle_type *part,
+        vector_type *forces, handle_type *forc,
         const size_t block_size, const size_t num_blocks,
         const size_t num_steps) {
     size_t i;
@@ -351,14 +351,14 @@ void run(SuperGlue<Options> &sg,
 //======================================================
 // reference implementation
 //======================================================
-void reference(particle_t *particles, vector_t *forces,
+void reference(particle_type *particles, vector_type *forces,
         const size_t num_particles, const size_t num_steps) {
-    vector_t f;
+    vector_type f;
     size_t s, i, j;
 
     for (s = 0; s < num_steps; ++s) {
         for (i = 0; i < num_particles; ++i) {
-            vector_t tmp;
+            vector_type tmp;
             tmp.x[0] = tmp.x[1] = tmp.x[2] = 0.0;
             for (j = i+1; j < num_particles; ++j) {
                 eval_force_tk(&particles[i], &particles[j], &f);
@@ -381,7 +381,7 @@ void reference(particle_t *particles, vector_t *forces,
 //======================================================
 // compare two solutions
 //======================================================
-void compare(particle_t *p0, particle_t *p1, const size_t num_particles) {
+void compare(particle_type *p0, particle_type *p1, const size_t num_particles) {
     size_t i;
 
     for (i = 0; i < num_particles; ++i) {
@@ -402,7 +402,7 @@ void compare(particle_t *p0, particle_t *p1, const size_t num_particles) {
 //======================================================
 // print out result
 //======================================================
-void dump(const particle_t *p, const size_t num_particles) {
+void dump(const particle_type *p, const size_t num_particles) {
     size_t i;
 
     cout << num_particles << endl;
@@ -410,7 +410,7 @@ void dump(const particle_t *p, const size_t num_particles) {
         cout << p[i].x[0] << ", " << p[i].x[1] << ", " << p[i].x[2] << endl;
 }
 
-void ref(particle_t *particles, vector_t *forces, const size_t num_particles, const size_t num_steps) {
+void ref(particle_type *particles, vector_type *forces, const size_t num_particles, const size_t num_steps) {
     // run simulation in serial
     srand(0);
     init(&particles[0], &forces[0], num_particles);
@@ -421,7 +421,7 @@ void ref(particle_t *particles, vector_t *forces, const size_t num_particles, co
     cout << "ref: " << time_stop2-time_start2 << endl;
 }
 
-void run(particle_t *particles, vector_t *forces,
+void run(particle_type *particles, vector_type *forces,
         const size_t num_particles, const size_t block_size, const size_t num_steps,
         const int num_threads) {
     globalptr = particles; // for debugging
@@ -432,8 +432,8 @@ void run(particle_t *particles, vector_t *forces,
 
     const size_t num_blocks = num_particles/block_size;
 
-    handle_t *part = new handle_t[num_blocks];
-    handle_t *forc = new handle_t[num_blocks];
+    handle_type *part = new handle_type[num_blocks];
+    handle_type *forc = new handle_type[num_blocks];
     Time::TimeUnit time_start;
     Time::TimeUnit time_stop;
 
@@ -471,9 +471,9 @@ int main(int argc, char *argv[]) {
     if (argc >= 5)
         num_threads = atoi(argv[4]);
 
-    particle_t *particles = new particle_t[num_particles];
-    vector_t *forces = new vector_t[num_particles];
-    particle_t *particles2 = new particle_t[num_particles];
+    particle_type *particles = new particle_type[num_particles];
+    vector_type *forces = new vector_type[num_particles];
+    particle_type *particles2 = new particle_type[num_particles];
 
     ref(particles2, forces, num_particles, num_steps);
     run(particles, forces, num_particles, block_size, num_steps, num_threads);

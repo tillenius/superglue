@@ -146,9 +146,8 @@ public:
                 return;
         }
 
-        this_->release_task(task, woken);
-
         TaskBase<Options> *current_parent = task->parent;
+        this_->release_task(task, woken);
         while (current_parent != NULL) {
             // this task is a subtask of some other task
             const size_t count(Atomic::decrease_nv(&current_parent->subtask_count));
@@ -180,7 +179,7 @@ class TaskExecutorBase
     template<typename, typename> friend class TaskExecutor_Stealing;
     template<typename, typename> friend class TaskExecutor_PassThreadId;
     typedef typename Options::ThreadingManagerType ThreadingManager;
-    typedef typename Options::version_t version_t;
+    typedef typename Options::version_type version_type;
     typedef typename Options::ReadyListType TaskQueue;
     typedef typename TaskQueue::unsafe_t TaskQueueUnsafe;
 
@@ -276,14 +275,14 @@ public:
         const size_t num_access = task->get_num_access();
         Access<Options> *access(task->get_access());
         for (size_t i = num_access; i > 0; --i) {
-            version_t ver = access[i-1].finished(woken);
+            version_type ver = access[i - 1].finished(woken);
             Options::LogDAG::task_finish(task, access[i-1].get_handle(), ver);
         }
         Options::FreeTask::free(task);
     }
 
     void submit_front(TaskBase<Options> *task) {
-        if (!Options::DependencyChecking::check_at_submit(task))
+        if (!task->are_dependencies_solved_or_notify())
             return;
 
         ready_list.push_front(task);
@@ -319,9 +318,6 @@ public:
                     return false;
                 }
             }
-
-            if (!Options::DependencyChecking::check_before_execution(task))
-                continue;
 
             // run with contributions, if that is activated
             if (run_contrib(task)) {
@@ -363,7 +359,7 @@ public:
     }
 
     void submit(TaskBase<Options> *task) {
-        if (!Options::DependencyChecking::check_at_submit(task))
+        if (!task->are_dependencies_solved_or_notify())
             return;
 
         ready_list.push_back(task);

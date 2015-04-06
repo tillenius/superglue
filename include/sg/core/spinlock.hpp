@@ -2,6 +2,7 @@
 #define SG_SPINLOCK_HPP_INCLUDED
 
 #include "sg/platform/atomic.hpp"
+#include "sg/platform/platform.hpp"
 
 namespace sg {
 
@@ -46,7 +47,7 @@ public:
         sp.lock();
     }
 
-    __attribute__((always_inline)) ~SpinLockScoped()  {
+    SG_INLINE ~SpinLockScoped()  {
         sp_.unlock();
     }
 };

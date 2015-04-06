@@ -4,6 +4,7 @@
 #if defined(_MSC_VER)
 #define NOMINMAX
 #include <windows.h>
+#include <intrin.h>
 #endif
 #if defined(__SUNPRO_CC)
 #include <atomic.h>
@@ -38,52 +39,8 @@ template<> struct AtomicImplAux<8> {
     template<typename T> static T cas(volatile T *ptr, T oldval, T newval) { return atomic_cas_64(ptr, oldval, newval); }
 };
 #endif // defined(_INT64_TYPE)
-#endif // defined(__SUNPRO_CC)
 
-#if defined(__INTEL_COMPILER) || defined(__GNUC__)
-template<int N> struct AtomicImplAux {
-    template<typename T> static void increase(T *ptr) { __sync_add_and_fetch(ptr, 1); }
-    template<typename T> static void decrease(T *ptr) { __sync_sub_and_fetch(ptr, 1); }
-    template<typename T> static T increase_nv(T *ptr) { return __sync_add_and_fetch(ptr, 1); }
-    template<typename T> static T decrease_nv(T *ptr) { return __sync_sub_and_fetch(ptr, 1); }
-    template<typename T> static T add_nv(T *ptr, T n) { return __sync_add_and_fetch(ptr, n); }
-    template<typename T> static T cas(volatile T *ptr, T oldval, T newval) { return __sync_val_compare_and_swap(ptr, oldval, newval); }
-};
-
-#endif // defined(__INTEL_COMPILER) || defined(__GNUC__)
-
-#if defined(_MSC_VER)
-template<int N> struct AtomicImplAux {
-    template<typename T> static void increase(T *ptr) { InterlockedIncrement(ptr); }
-    template<typename T> static void decrease(T *ptr) { InterlockedDecrement(ptr); }
-    template<typename T> static T increase_nv(T *ptr) { return InterlockedIncrement(ptr); }
-    template<typename T> static T decrease_nv(T *ptr) { return InterlockedDecrement(ptr); }
-    template<typename T> static T cas(volatile T *ptr, T oldval, T newval) { NOT_YET_IMPLEMENTED; }
-};
-#endif // _MSC_VER
-
-
-#if defined(__SUNPRO_CC)
 struct AtomicImpl {
-    static void memory_fence_enter() {
-        // Any store preceding membar_enter() will reach global visibility
-        // before all loads and stores following it.
-
-        // membar_enter() is typically used in code that implements locking
-        // primitives to ensure that a lock protects its data.
-
-        // write | read/write
-        membar_enter();
-    }
-    static void memory_fence_exit() {
-        // All loads and stores preceding membar_exit() will reach global visi-
-        // bility before any store that follows it.
-
-        // membar_exit() is typically used in code that implements locking
-        // primitives to ensure that a lock protects its data.
-        // read/write | write
-        membar_exit();
-    }
     static void memory_fence_producer() {
         // All stores preceding the memory barrier will reach global visibility
         // before any stores after the memory barrier reach global visibility.
@@ -97,23 +54,15 @@ struct AtomicImpl {
         membar_consumer();
     }
 
-    static void membar_sync() {
-        // All loads and stores preceding the memory barrier will complete and
-        // reach global visibility before any loads and stores after the memory
-        // barrier complete and reach global visibility.
-        // read/write | read/write
-        membar_sync();
-    }
-
     static bool lock_test_and_set(volatile unsigned int *ptr) {
         if (atomic_swap_32(ptr, 1) == 0) {
-            memory_fence_enter();
+            membar_enter();
             return true;
         }
         return false;
     }
     static void lock_release(volatile unsigned int *ptr) {
-        memory_fence_exit();
+        membar_exit();
         *ptr = 0;
     }
 
@@ -121,9 +70,18 @@ struct AtomicImpl {
     static void rep_nop() { asm ("rep;nop":::"memory"); }
     static void compiler_fence() { asm ("":::"memory"); }
 };
-#endif // __SUNPRO_CC
+#endif // defined(__SUNPRO_CC)
 
 #if defined(__INTEL_COMPILER) || defined(__GNUC__)
+template<int N> struct AtomicImplAux {
+    template<typename T> static void increase(T *ptr) { __sync_add_and_fetch(ptr, 1); }
+    template<typename T> static void decrease(T *ptr) { __sync_sub_and_fetch(ptr, 1); }
+    template<typename T> static T increase_nv(T *ptr) { return __sync_add_and_fetch(ptr, 1); }
+    template<typename T> static T decrease_nv(T *ptr) { return __sync_sub_and_fetch(ptr, 1); }
+    template<typename T> static T add_nv(T *ptr, T n) { return __sync_add_and_fetch(ptr, n); }
+    template<typename T> static T cas(volatile T *ptr, T oldval, T newval) { return __sync_val_compare_and_swap(ptr, oldval, newval); }
+};
+
 struct AtomicImpl {
     static bool lock_test_and_set(volatile unsigned int *ptr) { return __sync_lock_test_and_set(ptr, 1) == 0; }
     static void lock_release(volatile unsigned int *ptr) { __sync_lock_release(ptr); }
@@ -132,22 +90,14 @@ struct AtomicImpl {
     static void compiler_fence() { __asm __volatile ("":::"memory"); }
 
 #if defined(__SSE2__)
-
 #if defined(__INTEL_COMPILER)
-    static void memory_fence_enter()    { _mm_mfence(); }
-    static void memory_fence_exit()     { _mm_mfence(); }
     static void memory_fence_producer() { _mm_mfence(); }
     static void memory_fence_consumer() { _mm_mfence(); }
 #else // defined(__INTEL_COMPILER)
-    static void memory_fence_enter()    { __builtin_ia32_mfence(); }
-    static void memory_fence_exit()     { __builtin_ia32_mfence(); }
     static void memory_fence_producer() { __builtin_ia32_mfence(); }
     static void memory_fence_consumer() { __builtin_ia32_mfence(); }
 #endif // defined(__INTEL_COMPILER)
-
 #else // defined(__SSE2__)
-    static void memory_fence_enter()    { __asm __volatile ("":::"memory"); }
-    static void memory_fence_exit()     { __asm __volatile ("":::"memory"); }
     static void memory_fence_producer() { __asm __volatile ("":::"memory"); }
     static void memory_fence_consumer() { __asm __volatile ("":::"memory"); }
 #endif // defined(__SSE2__)
@@ -163,11 +113,36 @@ struct AtomicImpl {
 
 
 #if defined(_MSC_VER)
+template<int N> struct AtomicImplAux {
+    template<typename T> static void increase(T *ptr) { InterlockedIncrement((volatile LONG *) ptr); }
+    template<typename T> static void decrease(T *ptr) { InterlockedDecrement((volatile LONG *)ptr); }
+    template<typename T> static T increase_nv(T *ptr) { return InterlockedIncrement((volatile LONG *) ptr); }
+    template<typename T> static T decrease_nv(T *ptr) { return InterlockedDecrement((volatile LONG *) ptr); }
+    template<typename T> static T add_nv(T *ptr, T val) { return (T) InterlockedExchangeAdd((volatile LONG *) ptr, (LONG) val) + val; }
+    template<typename T> static T cas(volatile T *ptr, T oldval, T newval) {
+        return (T) InterlockedCompareExchange((volatile LONG *) ptr, (LONG) newval, (LONG) oldval);
+    }
+};
+
+template<> struct AtomicImplAux<8> {
+    template<typename T> static void increase(T *ptr) { InterlockedIncrement64((volatile LONGLONG *) ptr); }
+    template<typename T> static void decrease(T *ptr) { InterlockedDecrement64((volatile LONGLONG *) ptr); }
+    template<typename T> static T increase_nv(T *ptr) { return InterlockedIncrement64((volatile LONGLONG *) ptr); }
+    template<typename T> static T decrease_nv(T *ptr) { return InterlockedDecrement64((volatile LONGLONG *) ptr); }
+    template<typename T> static T add_nv(T *ptr, T val) { return InterlockedExchangeAdd64(ptr, val) + val; }
+    template<typename T> static T cas(volatile T *ptr, T oldval, T newval) {
+        return (T) InterlockedCompareExchange64((volatile LONG64 *) ptr, (LONG64) newval, (LONG64) oldval);
+    }
+};
+
 struct AtomicImpl {
-    static void memory_fence_enter() { MemoryBarrier(); }
-    static void memory_fence_exit() { MemoryBarrier(); }
     static void memory_fence_producer() { MemoryBarrier(); }
     static void memory_fence_consumer() { MemoryBarrier(); }
+    static bool lock_test_and_set(volatile unsigned int *ptr) { return InterlockedBitTestAndSet((long *) ptr, 0) == 0; }
+    static void lock_release(volatile unsigned int *ptr) { InterlockedBitTestAndReset((long *) ptr, 0); }
+    static void yield() { rep_nop(); }
+    static void rep_nop() { __asm { rep nop }; }
+    static void compiler_fence() { _ReadWriteBarrier(); }
 };
 #endif // _MSC_VER
 
@@ -194,10 +169,8 @@ struct Atomic {
     static bool lock_test_and_set(volatile unsigned int *ptr) { return detail::AtomicImpl::lock_test_and_set(ptr); }
 
     // release lock grabbed by lock_test_and_set, and perform the required memory barriers
-    static void lock_release(volatile unsigned int *ptr) { return detail::AtomicImpl::lock_release(ptr); }
+    static void lock_release(volatile unsigned int *ptr) { detail::AtomicImpl::lock_release(ptr); }
 
-    static void memory_fence_enter() { detail::AtomicImpl::memory_fence_enter(); }
-    static void memory_fence_exit() { detail::AtomicImpl::memory_fence_exit(); }
     static void memory_fence_producer() { detail::AtomicImpl::memory_fence_producer(); }
     static void memory_fence_consumer() { detail::AtomicImpl::memory_fence_consumer(); }
     static void yield() { detail::AtomicImpl::yield(); }

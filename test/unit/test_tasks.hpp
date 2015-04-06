@@ -40,7 +40,7 @@ class TestTasks : public TestCase {
          : value(value_), myValue(myValue_), otherValue(otherValue_) {}
         void run() {
             for (size_t i = 0; i < 1000; ++i)
-                Atomic::cas(value, myValue, otherValue);
+                Atomic::cas((void **)value, (void *)myValue, (void *)otherValue);
         }
     };
 

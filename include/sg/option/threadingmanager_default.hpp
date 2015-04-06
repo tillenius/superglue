@@ -52,9 +52,9 @@ private:
     };
 
     SpinLock lock_workers_initialized;
-    int start_counter;
+    unsigned int start_counter;
     char padding1[Options::CACHE_LINE_SIZE];
-    int num_cpus;
+    unsigned int num_cpus;
     std::vector<WorkerThread *> workerthreads;
 
 public:
@@ -69,9 +69,9 @@ private:
 
     int decide_num_cpus(int requested) {
         assert(requested == -1 || requested > 0);
-        const char *var = getenv("OMP_NUM_THREADS");
-        if (var != NULL) {
-            const int OMP_NUM_THREADS(atoi(var));
+        std::string var = sg_getenv("OMP_NUM_THREADS");
+        if (!var.empty()) {
+            const int OMP_NUM_THREADS(atoi(var.c_str()));
             assert(OMP_NUM_THREADS >= 0);
             if (OMP_NUM_THREADS != 0)
                 return OMP_NUM_THREADS;
@@ -89,6 +89,9 @@ public:
     {
         Options::ThreadAffinity::init();
         Options::ThreadAffinity::pin_main_thread();
+
+        // initialize static singleton before starting threads
+        Options::LogDAG::get_dag_data();
 
         lock_workers_initialized.lock();
         threads = new TaskExecutor<Options> *[num_cpus];
@@ -118,12 +121,12 @@ public:
         for (int i = 1; i < get_num_cpus(); ++i)
             threads[i]->terminate();
 
-        const int num_workers(num_cpus-1);
-        for (int i = 0; i < num_workers; ++i)
+        const unsigned int num_workers(num_cpus-1);
+        for (unsigned int i = 0; i < num_workers; ++i)
             workerthreads[i]->join();
-        for (int i = 0; i < num_workers; ++i)
+        for (unsigned int i = 0; i < num_workers; ++i)
             delete workerthreads[i];
-        for (int i = 0; i < num_cpus; ++i)
+        for (unsigned int i = 0; i < num_cpus; ++i)
             delete threads[i];
 
         delete [] threads;
@@ -131,7 +134,7 @@ public:
     }
 
     void start_executing() {
-        if (workers_start_paused() && lock_workers_initialized.is_locked())
+        if (workers_start_paused())
             lock_workers_initialized.unlock();
     }
 

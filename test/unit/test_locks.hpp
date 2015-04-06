@@ -41,7 +41,7 @@ public:
 
     testfunction *get(size_t &numTests) {
         static testfunction tests[] = {
-                testLockable<OpLockable>
+            testLockable<OpLockable>
         };
         numTests = sizeof(tests)/sizeof(testfunction);
         return tests;

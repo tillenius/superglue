@@ -1,6 +1,4 @@
 #include "sg/superglue.hpp"
-
-//#include "sg/option/depcheck_lazy.hpp"
 #include "sg/option/instr_trace.hpp"
 
 struct Options : public DefaultOptions<Options> {
@@ -38,9 +36,6 @@ int main() {
     sg.submit(new Req1(res));
 
   sg.barrier();
-  // assert(r.size() == 8);
-  // for (size_t i = 0; i < r.size(); ++i)
-  //  assert(r[i] == i);
 
   Log<Options>::dump("trace.log");
   return 0;

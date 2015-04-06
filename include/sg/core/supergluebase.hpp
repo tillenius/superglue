@@ -64,8 +64,11 @@ struct SANITY_CHECKS {
         enum { value = T(-1) > T(0) ? 1 : 0 };
     };
 
-    // version_t must be an unsigned type
-    typedef typename STATIC_ASSERT< is_unsigned<typename Options::version_t>::value >::type check_version_t;
+    // version_type must be an unsigned type
+    typedef typename STATIC_ASSERT< is_unsigned<typename Options::version_type>::value == 1>::type check_version_type;
+
+    // lockcount_type must be a signed type
+    typedef typename STATIC_ASSERT< is_unsigned<typename Options::lockcount_type>::value == 0>::type check_lockcount_type;
 
     // check that Lockable isn't disabled when access types require it to be enabled
     typedef typename STATIC_ASSERT< CheckLockableRequired<Options>::access_types_needs_lockable >::type check_lockable;

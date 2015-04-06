@@ -12,27 +12,19 @@ namespace Time {
 //   TimeUnit getFreq() // returns time units per second
 //
 
+typedef unsigned long long TimeUnit;
+
 #if defined(_MSC_VER) // MICROSOFT VISUAL C++
 
 #define NOMINMAX
 #include <windows.h>
-#pragma message("Using timer = Microsoft QueryPerformanceCounter()")
-typedef unsigned __int64 TimeUnit;
 static inline TimeUnit getTime() {
-    LARGE_INTEGER i;
-    QueryPerformanceCounter(&i);
-    return i.QuadPart;
+    return __rdtsc();
 }
-
-static inline TimeUnit getFreq() {
-    LARGE_INTEGER i;
-    QueryPerformanceFrequency(&i);
-    return i.QuadPart;
-}
+static inline TimeUnit getTimeStart() { return getTime(); }
+static inline TimeUnit getTimeStop() { return getTime(); }
 
 #elif defined(__x86_64__)
-
-typedef unsigned long long TimeUnit;
 
 static inline TimeUnit getTime() {
   unsigned hi, lo;
@@ -68,7 +60,6 @@ static inline TimeUnit getTimeStop() {
 #else
 
 #include <sys/time.h>
-typedef unsigned long long TimeUnit;
 static inline TimeUnit getTime() {
     timeval tv;
     gettimeofday(&tv, 0);
