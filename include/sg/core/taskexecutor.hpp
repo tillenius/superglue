@@ -343,18 +343,15 @@ public:
 
     void work_loop() {
         TaskExecutor<Options> *this_(static_cast<TaskExecutor<Options> *>(this));
+        TaskQueueUnsafe woken;
         for (;;) {
-            {
-                TaskQueueUnsafe woken;
-                while (execute_tasks(woken));
-            }
+            while (execute_tasks(woken));
 
-            tman.barrier_protocol.wait_at_barrier(*this_);
+            while (!tman.barrier_protocol.update_barrier_state(*this_))
+                Atomic::rep_nop();
 
             if (terminate_flag)
                 return;
-
-            Atomic::rep_nop();
         }
     }
 

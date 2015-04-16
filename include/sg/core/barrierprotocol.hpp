@@ -30,145 +30,61 @@ public:
     {
     }
 
-    // Called from TaskExecutor: Wait at barrier if requested.
-    void wait_at_barrier(TaskExecutor<Options> &te) {
+    // Called from TaskExecutor: return true if we are allowed to run tasks
+    bool update_barrier_state(TaskExecutor<Options> &te) {
         Atomic::compiler_fence();
         const int local_state(state);
+
+        // return if not in barrier
         if (local_state == 0)
-            return;
+            return true;
 
+        // set abort flag if we have tasks
+        if (!te.get_task_queue().empty()) {
+            if (abort != 1) {
+                abort = 1;
+                Atomic::memory_fence_producer(); // make sure abort is visible before state changes
+            }
+        }
+
+        // return if barrier is in same state as last time
         if (te.my_barrier_state == local_state)
-            return;
-
-        te.my_barrier_state = local_state;
+            return abort == 1;
 
         // new state
 
-        if (local_state == 1) {
-            // enter barrier
-            const unsigned int local_barrier_counter(Atomic::decrease_nv(&barrier_counter));
-            if (local_barrier_counter != 0) {
-                // wait for next state
-                for (;;) {
-                    const int local_abort(abort);
-                    if (local_abort == 1) {
-                        // aborted from elsewhere -- skip spinloop and start workloop
-                        return;
-                    }
+        te.my_barrier_state = local_state;
 
-                    if (!te.get_task_queue().empty()) {
-                        abort = 1;
-                        Atomic::memory_fence_producer();
-                        // we have to abort -- indicate others and start workloop
-                        return; // work loop, state == 1
-                    }
-
-                    const int new_local_state(state);
-                    if (new_local_state == 2) {
-                        // completed phase 1 without seeing abort. continue to phase 2
-                        break;
-                    }
-                    Atomic::yield();
-                    Atomic::compiler_fence();
-                }
-                if (!te.get_task_queue().empty_safe()) {
-                    abort = 1;
-                    Atomic::memory_fence_producer();
-                    // we have to abort -- indicate others and start workloop
-                    return; // work loop, state == 1
-                }
-                // phase 1 completed without abort.
-                state = 2;
-
-                te.my_barrier_state = 2;
-                const unsigned int local_barrier_counter(Atomic::decrease_nv(&barrier_counter));
-                if (local_barrier_counter == 0) {
-                    // last into phase 2
-
-                    barrier_counter = tm.get_num_cpus()-2;
-                    te.my_barrier_state = 0;
-                    const int local_abort(abort);
-                    if (local_abort != 1) {
-                        if (!te.get_task_queue().empty_safe()) {
-                            // we have to abort -- start next phase and exit to work-loop
-                            abort = 1;
-                            Atomic::memory_fence_producer();
-                        }
-                    }
-                    // leave barrier
-                    state = 0;
-                    return;
-                }
-                // phase 2, but not last. fall-through
-            }
-            else {
-                // last in for state 1 -- start phase 2
-                const unsigned int num_workers = tm.get_num_cpus()-1;
-                if (num_workers == 1) {
-                    // if there is a single worker we can't wait for anybody else to finish the barrier.
-                    if (!te.get_task_queue().empty_safe()) {
-                        abort = 1;
-                        Atomic::memory_fence_producer();
-                    }
-                    te.my_barrier_state = 0;
-                    state = 0;
-                    return;
-                }
-
-                const int local_abort(abort);
-                barrier_counter = num_workers-1;
-                te.my_barrier_state = 2;
-                if (local_abort == 1) {
-                    // already aborted -- start next phase and exit to work-loop
-                    state = 2;
-                    return;
-                }
-                if (!te.get_task_queue().empty_safe()) {
-                    // we have to abort -- start next phase and exit to work-loop
-                    abort = 1;
-                    Atomic::memory_fence_producer();
-                    state = 2;
-                    return;
-                }
-                // start next phase
-                state = 2;
-            }
-
-            // in phase 2, but not last -- wait for completion
-            for (;;) {
-                const int local_abort(abort);
-                if (local_abort == 1) {
-                    // aborted from elsewhere -- skip spinloop and start workloop
-                    return;
-                }
-
-                if (!te.get_task_queue().empty()) {
-                    abort = 1;
-                    Atomic::memory_fence_producer();
-                    // we have to abort -- indicate others and start workloop
-                    return;
-                }
-
-                const int new_local_state(state);
-                if (new_local_state != 2) {
-                    // completed phase 2 without seeing abort. finish barrier
-                    return;
-                }
-                Atomic::yield();
-                Atomic::compiler_fence();
-            }
-        }
-
-        // first time we see state == 2, and barrier is already aborted
-
+        // enter barrier
         const unsigned int local_barrier_counter(Atomic::decrease_nv(&barrier_counter));
-        if (local_barrier_counter == 0) {
-            // last into phase 2 -- finish barrier
-            te.my_barrier_state = 0;
-            state = 0;
+
+        // return if not last
+        if (local_barrier_counter != 0)
+            return abort == 1;
+
+        // we are last to enter the barrier
+
+        if (local_state == 1) {
+            const unsigned int num_workers = tm.get_num_cpus() - 1;
+            // if single worker, the barrier is finished
+            if (num_workers == 1) {
+                te.my_barrier_state = 0;
+                state = 0;
+                return true;
+            }
+
+            // setup state 2, join it, and return
+            te.my_barrier_state = 2;
+            barrier_counter = num_workers - 1;
+            Atomic::memory_fence_producer(); // make sure barrier_counter is visible before state changes
+            state = 2;
+            return abort == 1;
         }
 
-        return;
+        // last in for stage 2 -- finish barrier
+        te.my_barrier_state = 0;
+        state = 0;
+        return true;
     }
 
     // cannot be invoked by more than one thread at a time
