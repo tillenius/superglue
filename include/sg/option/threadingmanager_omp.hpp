@@ -26,6 +26,7 @@ private:
     int num_cpus;
 
 public:
+    enum { MAIN_THREAD_ID = 0, WORKER_THREAD_ID_BASE = 1 };
     BarrierProtocol<Options> barrier_protocol;
     TaskExecutor<Options> **threads;
     TaskQueue **task_queues;

@@ -108,12 +108,12 @@ public:
     SuperGlue(ThreadingManager &tman_)
      : delete_threadmanager(false), tman(&tman_), next_queue(0) {
         tman->init();
-        main_task_executor = tman->get_worker(0);
+        main_task_executor = tman->get_worker(Options::ThreadingManagerType::MAIN_THREAD_ID);
      }
 
     SuperGlue(int req = -1)
      : delete_threadmanager(true), tman(new ThreadingManager(req)), next_queue(0) {
-        main_task_executor = tman->get_worker(0);
+        main_task_executor = tman->get_worker(Options::ThreadingManagerType::MAIN_THREAD_ID);
     }
 
     ~SuperGlue() {
