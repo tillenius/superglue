@@ -2,6 +2,7 @@ mkdir build
 pushd build
 
 cl /nologo /EHsc /I ..\include ..\test\main.cpp
+.\main.exe
 
 for %%F in (..\test\modular\*.cpp) do (
   cl /nologo /EHsc /I ..\include %%F
