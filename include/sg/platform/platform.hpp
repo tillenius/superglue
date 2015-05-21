@@ -10,6 +10,12 @@
 #define SG_INLINE __attribute__((always_inline))
 #endif
 
+#if defined(_MSC_VER)
+#define SG_TLS __declspec( thread )
+#else
+#define SG_TLS __thread
+#endif
+
 std::string sg_getenv(const char *env) {
 #ifdef _WIN32
     char *buf;
