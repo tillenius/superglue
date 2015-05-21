@@ -141,7 +141,11 @@ struct AtomicImpl {
     static bool lock_test_and_set(volatile unsigned int *ptr) { return InterlockedBitTestAndSet((long *) ptr, 0) == 0; }
     static void lock_release(volatile unsigned int *ptr) { InterlockedBitTestAndReset((long *) ptr, 0); }
     static void yield() { rep_nop(); }
+#ifdef _M_X64
+    static void rep_nop() { YieldProcessor(); }
+#else
     static void rep_nop() { __asm { rep nop }; }
+#endif
     static void compiler_fence() { _ReadWriteBarrier(); }
 };
 #endif // _MSC_VER

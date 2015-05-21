@@ -60,7 +60,7 @@ struct affinity_cpu_set {
     DWORD_PTR cpu_set;
     affinity_cpu_set() : cpu_set(0) {}
     void set(int cpu) {
-        cpu_set |= 1<<cpu;
+        cpu_set |= static_cast<DWORD_PTR>(1) << static_cast<DWORD_PTR>(cpu);
     }
 };
 
