@@ -4,9 +4,9 @@
 #include "sg/core/taskqueueunsafe.hpp"
 #include "sg/core/taskqueuesafe.hpp"
 
-template<typename Options> class TaskBase;
-
 namespace sg {
+
+template<typename Options> class TaskBase;
 
 namespace detail {
 
