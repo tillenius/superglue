@@ -6,9 +6,6 @@
 namespace sg {
 
 template<typename Options>
-class TaskExecutor;
-
-template<typename Options>
 struct Trace {
     Time::TimeUnit start, stop;
     Trace(int threadid) {
