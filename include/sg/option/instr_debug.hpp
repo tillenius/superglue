@@ -23,6 +23,7 @@ struct TaskRunDebug {
         }
         fprintf(stderr, "%s\n", ss.str().c_str());
     }
+    static void after_barrier() {}
 };
 
 } // namespace sg

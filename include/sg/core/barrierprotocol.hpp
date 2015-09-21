@@ -36,8 +36,13 @@ public:
         const int local_state(state);
 
         // return if not in barrier
-        if (local_state == 0)
+        if (local_state == 0) {
+            if (te.my_barrier_state != 0) {
+                te.my_barrier_state = 0;
+                te.after_barrier();
+            }
             return true;
+        }
 
         // set abort flag if we have tasks
         if (!te.get_task_queue().empty()) {
@@ -70,6 +75,7 @@ public:
             if (num_workers == 1) {
                 te.my_barrier_state = 0;
                 state = 0;
+                te.after_barrier();
                 return true;
             }
 
@@ -84,6 +90,7 @@ public:
         // last in for stage 2 -- finish barrier
         te.my_barrier_state = 0;
         state = 0;
+        te.after_barrier();
         return true;
     }
 
@@ -96,7 +103,7 @@ public:
             while (te.execute_tasks(woken));
         }
 
-        const unsigned int num_workers(static_cast<unsigned int>(tm.get_num_cpus())-1);
+		const unsigned int num_workers(static_cast<unsigned int>(tm.get_num_cpus())-1);
 
         if (num_workers == 0)
             return;

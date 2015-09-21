@@ -137,13 +137,15 @@ void setup() {
     size_t row = 0;
     double rowheight = 1.0;
     double barheight = 0.8;
-    
+    const double proc_distance = 2.5;
+    double extra_height = 0.0;
+
     procthr2coord.resize(tasksperproc.size());
     for (size_t proc = 0; proc < tasksperproc.size(); ++proc) {
         procthr2coord[proc].resize(tasksperproc[proc].size());
         for (size_t thread = 0; thread < tasksperproc[proc].size(); ++thread, ++row) {
 
-            double y = row * rowheight + 0.5;
+          double y = extra_height + row * rowheight + 0.5;
             double y0 = y - barheight/2.0;
             double y1 = y + barheight/2.0;
             rowpos.push_back(y);
@@ -169,6 +171,7 @@ void setup() {
 
             }
         }
+        extra_height += proc_distance;
     }
 
     m_pos[0] = 0.05f * viewx1;
@@ -527,12 +530,15 @@ bool parse(const char *filename) {
     }
     std::string line;
 
-    while (!infile.eof()) {
+    while (infile.good() && !infile.eof()) {
         getline(infile, line);
         if (line.empty())
             break;
         std::istringstream iss(line, istringstream::in);
         if (line == "LOG 2")
+            continue;
+
+        if (line.find('#') == 0)
             continue;
 
         size_t pos = line.find(":");
@@ -575,6 +581,24 @@ bool parse(const char *filename) {
         return false;
     }
 
+    // fix process and thread ids
+    set<unsigned long long> procs;
+    for (size_t i = 0; i < alltasks.size(); ++i)
+      procs.insert(alltasks[i].proc);
+    vector<unsigned long long> procvec(procs.begin(), procs.end());
+    sort(procvec.begin(), procvec.end());
+    map<unsigned long long, unsigned long long> procmap;
+    for (size_t i = 0; i < procvec.size(); ++i)
+      procmap[procvec[i]] = i;
+
+    vector< set<unsigned long long> > threads;
+    threads.resize(procs.size());
+
+    for (size_t i = 0; i < alltasks.size(); ++i) {
+      alltasks[i].proc = procmap[alltasks[i].proc];
+      threads[alltasks[i].proc].insert(alltasks[i].thread);
+    }
+
     // store all task names (for coloring later)
     for (size_t i = 0; i < alltasks.size(); ++i) {
         std::string s = alltasks[i].name;
@@ -587,16 +611,26 @@ bool parse(const char *filename) {
     }
 
     // normalize start time
-    unsigned long long starttime = alltasks[0].start;
+    size_t num_procs;
+    if (procs.empty())
+      num_procs = 1;
+    else
+      num_procs = procs.size();
+
+    std::vector<unsigned long long> starttimes(num_procs);
+    std::vector<bool> starttime_set(num_procs);
     for (size_t i = 0; i < alltasks.size(); ++i) {
-        if (alltasks[i].start < starttime)
-            starttime = alltasks[i].start;
+        const unsigned long long procid = alltasks[i].proc;
+        if (!starttime_set[procid] || alltasks[i].start < starttimes[procid]) {
+            starttimes[procid] = alltasks[i].start;
+            starttime_set[procid] = true;
+        }
     }
 
     unsigned long long endtime = 0;
     unsigned long long totaltime = 0;
     for (size_t i = 0; i < alltasks.size(); ++i) {
-        alltasks[i].start -= starttime;
+        alltasks[i].start -= starttimes[alltasks[i].proc];
         if (alltasks[i].start + alltasks[i].length > endtime)
             endtime = alltasks[i].start + alltasks[i].length;
         totaltime += alltasks[i].length;
@@ -606,26 +640,8 @@ bool parse(const char *filename) {
             << " endtime=" << format(endtime)
             << " time=" << format(totaltime)
             << " parallelism=" << std::setprecision(3) << std::fixed
- << totaltime/(double) endtime
+            << totaltime / (double)endtime
             << endl;
-
-    // fix process and thread ids
-    set<unsigned long long> procs;
-    for (size_t i = 0; i < alltasks.size(); ++i)
-        procs.insert(alltasks[i].proc);
-    vector<unsigned long long> procvec(procs.begin(), procs.end());
-    sort(procvec.begin(), procvec.end());
-    map<unsigned long long, unsigned long long> procmap;
-    for (size_t i = 0; i < procvec.size(); ++i)
-        procmap[ procvec[i] ] = i;
-
-    vector< set<unsigned long long> > threads;
-    threads.resize(procs.size());
-
-    for (size_t i = 0; i < alltasks.size(); ++i) {
-        alltasks[i].proc = procmap[ alltasks[i].proc ];
-        threads[ alltasks[i].proc ].insert( alltasks[i].thread );
-    }
 
     vector< map<unsigned long long, unsigned long long> > threadmap;
     threadmap.resize( threads.size() );

@@ -142,7 +142,7 @@ struct AtomicImpl {
     static void lock_release(volatile unsigned int *ptr) { InterlockedBitTestAndReset((long *) ptr, 0); }
     static void yield() { rep_nop(); }
 #ifdef _M_X64
-    static void rep_nop() { YieldProcessor(); }
+    static void rep_nop() { _mm_pause(); }
 #else
     static void rep_nop() { __asm { rep nop }; }
 #endif

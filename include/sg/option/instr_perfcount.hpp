@@ -52,6 +52,7 @@ struct PerfTiming {
             end_context_switches - context_switches);
         Log<Options>::log(txt, start, stop);
     }
+    static void after_barrier() {}
 };
 
 } // namespace sg

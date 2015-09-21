@@ -41,6 +41,7 @@ struct PerfProcStat {
 
         Log<Options>::log((detail::GetName::get_name(task) + buffer).c_str(), start, stop);
     }
+    static void after_barrier() {}
 };
 
 } // namespace sg

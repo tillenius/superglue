@@ -347,10 +347,10 @@ public:
         for (;;) {
             while (execute_tasks(woken));
 
-            while (!tman.barrier_protocol.update_barrier_state(*this_))
+			while (!tman.barrier_protocol.update_barrier_state(*this_))
                 Atomic::rep_nop();
 
-            if (terminate_flag)
+			if (terminate_flag)
                 return;
         }
     }

@@ -75,6 +75,7 @@ struct NoInstrumentation {
 
     static void run_task_before(TaskBase<Options> *) {}
     static void run_task_after(TaskBase<Options> *) {}
+    static void after_barrier() {}
 };
 
 // ============================================================================

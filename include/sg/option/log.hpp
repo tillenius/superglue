@@ -96,8 +96,10 @@ public:
 
     struct ThreadData {
         int id;
+        Time::TimeUnit idle_time;
+        Time::TimeUnit barrier_time;
         std::vector<Event> events;
-        ThreadData(int id_) : id(id_) {
+        ThreadData(int id_) : id(id_), idle_time(0), barrier_time(0) {
             events.reserve(65536);
         }
     };
@@ -122,6 +124,16 @@ public:
         data.events.push_back(Event(text, start, stop));
     }
 
+    static void add_idle_time(Time::TimeUnit time) {
+        ThreadData &data(getThreadData());
+        data.idle_time += time;
+    }
+
+    static void add_barrier_time(Time::TimeUnit time) {
+        ThreadData &data(getThreadData());
+        data.barrier_time += time;
+    }
+
     static void dump(const char *filename, int node_id = 0) {
         std::ofstream out(filename);
         LogData &data(getLogData());
@@ -143,6 +155,11 @@ public:
                 << merged[i].first.time_total << " "
                 << merged[i].first.name << std::endl;
         }
+
+        for (size_t i = 0; i < num; ++i)
+            out << "# " << i << ": idle= " << data.threaddata[i]->idle_time << std::endl;
+        for (size_t i = 0; i < num; ++i)
+            out << "# " << i << ": barrier= " << data.threaddata[i]->barrier_time << std::endl;
 
         out.close();
     }
