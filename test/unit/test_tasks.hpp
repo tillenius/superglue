@@ -135,7 +135,7 @@ class TestTasks : public TestCase {
         }
 
         {
-            std::vector< Handle<OpPaused> > h2(1000);
+            Handle<OpPaused> *h2 = new Handle<OpPaused>[1000];
             SuperGlue<OpPaused> sg;
             size_t value = 0;
             bool success = true;
@@ -145,6 +145,7 @@ class TestTasks : public TestCase {
 
             sg.start_executing();
             sg.barrier();
+            delete[] h2;
             if (value == 0)
                 return false;
             return !success;

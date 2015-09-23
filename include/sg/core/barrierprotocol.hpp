@@ -128,6 +128,7 @@ public:
                         break;
                     if (!te.get_task_queue().empty_safe())
                         break;
+                    te.after_barrier();
                     return;
                 }
 

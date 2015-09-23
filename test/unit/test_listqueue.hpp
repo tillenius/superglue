@@ -49,7 +49,7 @@ class TestListQueue : public TestCase {
 
         {
             SuperGlue<OpPaused> sg;
-            std::vector< Handle<OpPaused> > h2(1000);
+            Handle<OpPaused> *h2 = new Handle<OpPaused>[1000];
             size_t value = 0;
             bool success = true;
             for (size_t i = 0; i < 1000; ++i)
@@ -61,6 +61,7 @@ class TestListQueue : public TestCase {
 
             sg.start_executing();
             sg.barrier();
+            delete[] h2;
             if (value == 0)
                 return false;
             return !success;
