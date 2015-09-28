@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset='utf-8' />
+  <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+  <meta name="description" content="SuperGlue : SuperGlue -- A C++ Header-Only Template Library for Data-Dependency Driven Task Parallelism" />
+
+  <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+  <style>
+  tt {
+    font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+    font-size: 14px;
+  }
+  </style>
+  <title>SuperGlue Tutorial</title>
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div id="header_wrap" class="outer">
+  <header class="inner">
+    <h1 id="project_title">SuperGlue Tutorial</h1>
+  </header>
+</div>
+
+<!-- MAIN CONTENT -->
+<div id="main_content_wrap" class="outer">
+<section id="main_content" class="inner">
+
+<h2>First example</h2>
+
+The following example uses SuperGlue to execute a single, independent task:
+
+<pre class="prettyprint">
+#include "sg/superglue.hpp"
+#include &lt;iostream&gt;
+
+struct Options : public DefaultOptions&lt;Options&gt; {};
+
+struct MyTask : public Task&lt;Options&gt; {
+    void run() {
+        std::cout &lt;&lt; "Hello world!" &lt;&lt; std::endl;
+    }
+};
+
+int main() {
+    SuperGlue&lt;Options&gt; sg;
+    sg.submit(new MyTask());
+    return 0;
+}
+</pre>
+
+Compile with
+<pre>
+g++ -I $(SUPERGLUE)/include helloworld.cpp -pthread
+</pre>
+where <tt>$(SUPERGLUE)</tt> is replaced with the path to where SuperGlue
+was downloaded.
+
+<h3>The Code Example Explained</h3>
+
+First, the SuperGlue header file is included:
+<pre class="prettyprint">
+#include "superglue.hpp"
+</pre>
+
+<br>
+
+SuperGlue is designed to be customizable, and this is implemented by
+having an Options struct that is a template parameter to most classes.
+In this example, the default options are used, and the Options struct is defined by
+<pre class="prettyprint">
+struct Options : public DefaultOptions&lt;Options&gt; {};
+</pre>
+
+<br>
+
+Tasks are classes that inherits the <tt>Task&lt;Options&gt;</tt> class, and provide a
+<tt>run()</tt> method. Tasks typically register which shared data structures
+they access in the constructor. The task in this example has no
+dependencies, why no constructor is needed. The task is defined by
+<pre class="prettyprint">
+struct MyTask : public Task&lt;Options&gt; {
+    void run() {
+        std::cout &lt;&lt; "Hello world!" &lt;&lt; std::endl;
+    }
+};
+</pre>
+
+<br>
+
+The run-time system and the worker threads is started by instantiating
+an object of the SuperGlue class, like this:
+<pre class="prettyprint">
+SuperGlue&lt;Options&gt; sg;
+</pre>
+This will create one worker thread per available core, except for one
+which is reserved for the main thread.
+
+<p></p>
+
+It is also possible to specify how many CPUs to use as an argument to the constructor.
+To limit the number of CPUs used to 4 (main thread plus three workers),
+the run-time system is started like this:
+<pre class="prettyprint">
+SuperGlue&lt;Options&gt; sg(4);
+</pre>
+<p><em>WARNING: This number must be less or equal to the number of available CPUs.</em></p>
+
+Tasks are submitted to SuperGlue using the <tt>submit()</tt> method:
+<pre class="prettyprint">
+sg.submit(new MyTask());
+</pre>
+<p>
+When a task has been submitted to SuperGlue, the ownership (that is, the
+responsibility for deleting it) is transfered
+to SuperGlue.
+</p>
+
+<p>
+When the SuperGlue object falls out of scope, there will be an
+implied barrier that waits for all tasks to finish, and the worker
+threads will then be terminated.
+</p>
+
+<h2>Tasks with Dependencies</h2>
+
+The main objective of SuperGlue is to manage dependencies between tasks
+in a flexible and efficient way. The following code is an example with task
+dependencies.
+
+<pre class="prettyprint">
+#include "sg/superglue.hpp"
+#include &lt;iostream&gt;
+
+const size_t numSlices = 5;
+const size_t sliceSize = 100;
+
+struct Options : public DefaultOptions&lt;Options&gt; {};
+
+// Task that inputs a vector and outputs a scaled vector.
+struct ScaleTask : public Task&lt;Options&gt; {
+    double s, *a, *b;
+    ScaleTask(double s_,
+              double *a_, Handle&lt;Options&gt; &amp;hA,
+              double *b_, Handle&lt;Options&gt; &amp;hB)
+    : s(s_), a(a_), b(b_)
+    {
+        register_access(ReadWriteAdd::read, &amp;hA);
+        register_access(ReadWriteAdd::write, &amp;hB);
+    }
+    void run() {
+        for (size_t i = 0; i &lt; sliceSize; ++i)
+            b[i] = s*a[i];
+    }
+};
+
+// Task that input two vectors and sums them into an ouput vector
+struct SumTask : public Task&lt;Options&gt; {
+    double *a, *b, *c;
+    SumTask(double *a_, Handle&lt;Options&gt; &amp;hA,
+            double *b_, Handle&lt;Options&gt; &amp;hB,
+            double *c_, Handle&lt;Options&gt; &amp;hC)
+    : a(a_), b(b_), c(c_)
+    {
+        register_access(ReadWriteAdd::read, &amp;hA);
+        register_access(ReadWriteAdd::read, &amp;hB);
+        register_access(ReadWriteAdd::write, &amp;hC);
+    }
+    void run() {
+        for (size_t i = 0; i &lt; sliceSize; ++i)
+            c[i] = a[i]+b[i];
+    }
+};
+
+int main() {
+    double data[numSlices][sliceSize];
+
+    for (size_t i = 0; i &lt; sliceSize; ++i)
+        data[0][i] = 1.0;
+
+    // Define handles for the slices
+    Handle&lt;Options&gt; h[numSlices];
+
+    SuperGlue&lt;Options&gt; sg;
+    sg.submit(new ScaleTask(2.0, data[0], h[0], data[1], h[1]));         // h_1 = 2*h_0
+    sg.submit(new ScaleTask(3.0, data[0], h[0], data[2], h[2]));         // h_2 = 3*h_0
+    sg.submit(new SumTask(data[0], h[0], data[1], h[1], data[3], h[3])); // h_3 = h_0+h_1
+    sg.submit(new SumTask(data[1], h[1], data[2], h[2], data[4], h[4])); // h_4 = h_1+h_2
+
+    // Wait for all tasks to finish
+    sg.barrier();
+
+    // The data may be accessed here, after the barrier
+    std::cout &lt;&lt; "result=[" &lt;&lt; data[0][0] &lt;&lt; " "  &lt;&lt; data[1][0] &lt;&lt; " "
+              &lt;&lt; data[2][0] &lt;&lt; " " &lt;&lt; data[3][0] &lt;&lt; " " &lt;&lt; data[4][0]
+              &lt;&lt; "]" &lt;&lt; std::endl;
+    return 0;
+}
+</pre>
+
+In SuperGlue, dependencies are specified by registering which <emph>handle</emph>s
+a task accesses. Handles are objects that represent shared variables. In the
+example above, one handle is created per slice of the vector <tt>data</tt>:
+<pre class="prettyprint">
+Handle&lt;Options&gt; h[numSlices];
+</pre>
+
+<br>
+
+SuperGlue does not know about the connection between handles and which
+variables they protect. This allows handles to be used for representing anything.
+
+<p></p>
+
+The handles are sent along when constructing the tasks that use the
+corresponding data. In the constructor, the task must register that it
+accesses the handle, and if it reads or writes the data. The registration
+in <tt>ScaleTask</tt> is performed in the following two lines:
+<pre class="prettyprint">
+register_access(ReadWriteAdd::read, &amp;hA);
+register_access(ReadWriteAdd::write, &amp;hB);
+</pre>
+
+Here, <tt>ReadWriteAdd</tt> is the default class of access types,
+which defines three different access types:
+<ul>
+<li><tt>read</tt> -- The task reads the data. Several tasks can read the same data at a time.</li>
+<li><tt>write</tt> -- The task reads and writes to the data. Only one task can write to the data at a time, and accesses must occur in the order in which they were submitted.</li>
+<li><tt>add</tt> -- The task reads and writes to the data, and can be reordered with other tasks with the same type of access to the data. </li>
+</ul>
+The data-flow in this example can be illustrated by the following graph:
+<center>
+<embed src="images/dag1.svg" type="image/svg+xml" />
+</center>
+From this graph it can be seen that the task computing <tt>h[3]</tt> can start
+as soon as <tt>h[1]</tt> is available, while the task computing <tt>h[4]</tt>
+cannot start until both <tt>h[1]</tt> and <tt>h[2]</tt> to be available.
+These kinds of dependencies are irregular in the sense that it is not possible to
+achieve this by spawning tasks recursively.
+
+<h1>More Examples</h1>
+
+The remainder of the documentation is in the form of examples available in
+the <tt>examples/</tt> directory. These examples are described briefly below.
+
+<h3>examples/accesstypes</h3>
+<p>An example of user-defined access types.</p>
+<p>The usual <tt>read</tt>, <tt>write</tt>, <tt>add</tt> access types are
+expanded with a new access type: <tt>mul</tt>. The new <tt>mul</tt> access
+types behaves like <tt>add</tt> in the sense that accesses may occur in the
+same order but not concurrently, but separates <tt>add</tt> from <tt>mul</tt>
+so that the accesses of different types are executed in the order they were
+submitted.
+</p>
+
+<h3>examples/customhandle</h3>
+<p>Shows how the <tt>Handle&lt;Options&gt;</tt> class can be extended.</p>
+<p>This example extends the handle class with a data member and a new method,
+that all handles will carry. In the example, it is used to store an index into
+a global array, and by that associate the handle with the data it represents,
+since all handles are understood to protect parts of the same array in this
+application.
+</p>
+
+<h3>examples/dag</h3>
+<p>Shows how SuperGlue can generate a directed acyclic graph for debugging.</p>
+<p>
+This example generates the DAG of a Cholesky factorization, by implementing a
+tiled Cholesky factorization but with dummy tasks that perform no actual work.
+By enabling features in the <tt>Options</tt> struct, SuperGlue will perform
+some book-keeping, and can be asked to generate a Graphviz .dot-file that
+illustrates the dependencies. This book-keeping will come with some cost, and
+is not ment to be enabled during normal execution.
+</p>
+
+<h3>examples/dependencies</h3>
+<p>Shows how to create tasks with dependencies in SuperGlue.</p>
+<p>This is the same example as above.</p>
+
+<h3>examples/handlewithdata</h3>
+<p>Shows a strategy where the handles are included into user defined datatypes.</p>
+<p>This example also associates handles with the data they represent, using an
+alternative strategy to the one used in <tt>examples/customhandle</tt>.
+This strategy suits better when different handles contain different data types.
+</p>
+
+<h3>examples/helloworld</h3>
+<p>A minimal example of using SuperGlue.</p>
+<p>The same example as the first one in this tutorial.</p>
+
+<h3>examples/logging</h3>
+<p>Shows the logging support.</p>
+<p>This example enables logging, and creates a log-file of the execution.
+The generate log file contains one line per executed tasks, on the following
+format:
+</p>
+<pre>
+  NODE THREAD: START_TIME LENGTH NAME
+</pre>
+An actual line looks something like this:
+<pre>
+  0 4: 1053212 1000434 B
+</pre>
+<p>
+which would mean that node 0 executed a task on thread 4 that started at time
+1053212 and executed for 1000434 cycles, and was named "B". The start time is
+the time in cycles since the first executed task.
+</p>
+
+<p>
+These log files can be visualized using the Python script
+<tt>scripts/drawsched.py</tt>, or by using the application
+<tt>tools/viewer</tt>.
+</p>
+
+<h3>examples/nbody</h3>
+<p>An implementation of a n-body simulation using SuperGlue.</p>
+<p>Calculates the direct forces between a set of particles, and
+move the particles accordingly, for a number of time steps.
+Logging is enabled, and a logfile is created showing the execution.
+This example uses a feature called <emph>Contributions</emph>,
+which allows several tasks performing <tt>add</tt> accesses to
+the same handle to execute at a time, by duplicating the buffer.
+The interface of this feature is not stabilized yet, and subject
+to change.</p>
+
+<h3>examples/pinnedtasks</h3>
+<p>Shows how to get fine-grained control over task placement and execution.</p>
+<p>In this example, task stealing is disabled and tasks are explicitly placed
+on specified worker threads. This can be used to gain control over which task
+is executed where, for experiments. Also, tasks are not allowed to execute as
+soon as they are submitted, but instead must wait until
+<tt>start_executing()</tt> is called.</p>
+
+<h3>examples/subtasks</h3>
+<p>Shows how to submit tasks from tasks.</p>
+<p>Submitting tasks is not thread safe by default, but can be made thread safe
+by specifying so in the <tt>Options</tt> struct.</p>
+<p>The created tasks have no connection with their parent, but are independent.
+Creating tasks from several threads can cause dead-locks, but it can also be
+useful for distributing the work of submitting tasks for performance reasons.
+Another use is to delay the task creation until some tasks already have been
+executed to avoid creating too many tasks at once, while also avoiding having
+to wait for all tasks to finish before continuing the creation of tasks.
+</p>
+
+<h3>examples/vardeps</h3>
+<p>Shows an example where the number of dependencies of a task depends on its arguments.</p>
+<p>In this example, the number of handles that a task accesses depends on its
+parameters.</p>
+
+<h3>examples/workspace</h3>
+<p>Shows how to allocate thread-local work buffers.</p>
+<p>SuperGlue allows each workerthread to preallocate a certain (configurable)
+amount of memory that can be requested by the tasks to be used as work buffers.
+The memory is automatically reclaimed by the worker thread when each task has
+finished. The purpose of this is to avoid having to allocate memory from within
+tasks, which can be a performance issue.</p>
+
+<h2>Examples with External Dependencies</h2>
+
+The <tt>examples_dep</tt> directory contains examples that depend on
+external packages.
+
+<h3>examples_dep/cholesky</h3>
+<p>Performs a tiled Cholesky decomposition using Intel MKL</p>
+<p>A tiled Cholesky factorization, based on an example from SMPSs developed by
+Barcelona Supercomputing Center. The Makefile needs to be modified to contain
+the correct paths to the Intel MKL installation, which is required for this
+example.</p>
+
+</section>
+</div>
+</body>
+</html>
